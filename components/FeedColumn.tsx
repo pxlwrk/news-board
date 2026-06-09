@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import { FeedCategory, FeedItem, CATEGORY_CONFIG } from "@/lib/feeds";
 import { NewsCard } from "./NewsCard";
 
@@ -24,6 +25,21 @@ function SkeletonRow({ idx }: { idx: number }) {
 
 export function FeedColumn({ category, items, loading }: FeedColumnProps) {
   const config = CATEGORY_CONFIG[category];
+  const innerRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
+  const [scrollOffset, setScrollOffset] = useState("0px");
+
+  // Compute how far we need to scroll so the animation knows the distance
+  useEffect(() => {
+    if (!innerRef.current || !outerRef.current) return;
+    const inner = innerRef.current.scrollHeight;
+    const outer = outerRef.current.clientHeight;
+    if (inner > outer) {
+      setScrollOffset(`-${inner - outer}px`);
+    } else {
+      setScrollOffset("0px");
+    }
+  }, [items]);
 
   return (
     <div className="flex flex-col h-full min-h-0 rounded-lg border border-slate-800/50 bg-slate-950/30 overflow-hidden">
@@ -42,19 +58,27 @@ export function FeedColumn({ category, items, loading }: FeedColumnProps) {
         )}
       </div>
 
-      {/* Feed Items */}
-      <div className="flex-1 overflow-y-auto custom-scroll">
+      {/* Feed Items — auto-scrolling container */}
+      <div ref={outerRef} className="flex-1 overflow-hidden relative">
         {loading ? (
-          Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} idx={i} />)
+          <div>
+            {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} idx={i} />)}
+          </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-700 py-8">
             <span className="text-2xl mb-2">📭</span>
             <span className="text-[10px]">Keine Einträge</span>
           </div>
         ) : (
-          items.map((item, idx) => (
-            <NewsCard key={item.id} item={item} index={idx} />
-          ))
+          <div
+            ref={innerRef}
+            className="auto-scroll-inner"
+            style={{ "--scroll-offset": scrollOffset } as React.CSSProperties}
+          >
+            {items.map((item, idx) => (
+              <NewsCard key={item.id} item={item} index={idx} />
+            ))}
+          </div>
         )}
       </div>
     </div>

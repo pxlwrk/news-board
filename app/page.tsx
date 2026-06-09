@@ -1,13 +1,17 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FeedCategory, FeedItem, CATEGORY_CONFIG } from "@/lib/feeds";
+import { SocialPost } from "@/lib/social";
 import { FeedColumn } from "@/components/FeedColumn";
+import { SocialColumn } from "@/components/SocialColumn";
 import { StatusBar } from "@/components/StatusBar";
 import { KPICard } from "@/components/KPICard";
 import { ThreatGauge } from "@/components/ThreatGauge";
 import { ActivityChart } from "@/components/ActivityChart";
 
-interface KPIs {
+// ── Types ──────────────────────────────────────────────────────────────────
+
+interface FeedKPIs {
   criticalAdvisories: number;
   securityNews24h: number;
   euRegulatory7d: number;
@@ -22,141 +26,191 @@ interface FeedData {
   lastFetched: string;
   errors: string[];
   usingDemoData?: boolean;
-  kpis: KPIs;
+  kpis: FeedKPIs;
 }
 
-const COLUMN_ORDER: FeedCategory[] = [
-  "security_critical",
-  "security_news",
-  "government_it",
-  "eu_policy",
-  "tech_trends",
-  "ai_innovation",
+interface ExternalKPIs {
+  cisaKev: { total: number; newThisWeek: number; newToday: number; lastAdded: string } | null;
+  nvd: { criticalToday: number; highToday: number } | null;
+  urlhaus: { urlsOnline: number; urlsAdded24h: number } | null;
+  fetchedAt: string;
+  errors: string[];
+}
+
+interface SocialData {
+  posts: SocialPost[];
+  usingDemoData?: boolean;
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────
+
+const NEWS_COLUMNS: FeedCategory[] = [
+  "security_critical", "security_news", "government_it",
+  "eu_policy", "tech_trends", "ai_innovation",
 ];
 
-const REFRESH_MS = 5 * 60 * 1000;
+const FEED_REFRESH_MS   = 5  * 60 * 1000;
+const KPI_REFRESH_MS    = 15 * 60 * 1000;
+const SOCIAL_REFRESH_MS = 3  * 60 * 1000;
+
+// ── Component ──────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [data, setData] = useState<FeedData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [feedData,   setFeedData]   = useState<FeedData | null>(null);
+  const [extKpis,    setExtKpis]    = useState<ExternalKPIs | null>(null);
+  const [socialData, setSocialData] = useState<SocialData | null>(null);
+
+  const [feedLoading,   setFeedLoading]   = useState(true);
+  const [kpiLoading,    setKpiLoading]    = useState(true);
+  const [socialLoading, setSocialLoading] = useState(true);
+
+  const feedTimer   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const kpiTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const socialTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchFeeds = useCallback(async () => {
-    setLoading(true);
+    setFeedLoading(true);
     try {
-      const res = await fetch("/api/feeds", { cache: "no-store" });
-      if (res.ok) setData(await res.json());
-    } finally {
-      setLoading(false);
-    }
+      const r = await fetch("/api/feeds", { cache: "no-store" });
+      if (r.ok) setFeedData(await r.json());
+    } finally { setFeedLoading(false); }
   }, []);
 
-  useEffect(() => {
-    fetchFeeds();
-    timer.current = setInterval(fetchFeeds, REFRESH_MS);
-    return () => { if (timer.current) clearInterval(timer.current); };
-  }, [fetchFeeds]);
+  const fetchKpis = useCallback(async () => {
+    setKpiLoading(true);
+    try {
+      const r = await fetch("/api/kpis", { cache: "no-store" });
+      if (r.ok) setExtKpis(await r.json());
+    } finally { setKpiLoading(false); }
+  }, []);
 
+  const fetchSocial = useCallback(async () => {
+    setSocialLoading(true);
+    try {
+      const r = await fetch("/api/social", { cache: "no-store" });
+      if (r.ok) setSocialData(await r.json());
+    } finally { setSocialLoading(false); }
+  }, []);
+
+  const refreshAll = useCallback(() => {
+    fetchFeeds(); fetchKpis(); fetchSocial();
+  }, [fetchFeeds, fetchKpis, fetchSocial]);
+
+  useEffect(() => {
+    refreshAll();
+    feedTimer.current   = setInterval(fetchFeeds,  FEED_REFRESH_MS);
+    kpiTimer.current    = setInterval(fetchKpis,   KPI_REFRESH_MS);
+    socialTimer.current = setInterval(fetchSocial, SOCIAL_REFRESH_MS);
+    return () => {
+      [feedTimer, kpiTimer, socialTimer].forEach((t) => { if (t.current) clearInterval(t.current); });
+    };
+  }, [refreshAll, fetchFeeds, fetchKpis, fetchSocial]);
+
+  const anyLoading = feedLoading || kpiLoading || socialLoading;
   const secItems: FeedItem[] = [
-    ...(data?.categories?.security_critical?.items ?? []),
-    ...(data?.categories?.security_news?.items ?? []),
+    ...(feedData?.categories?.security_critical?.items ?? []),
+    ...(feedData?.categories?.security_news?.items ?? []),
   ];
-  const kpis = data?.kpis;
-  const critAlerts = kpis?.criticalAdvisories ?? 0;
+
+  const kev     = extKpis?.cisaKev;
+  const nvd     = extKpis?.nvd;
+  const urlhaus = extKpis?.urlhaus;
+  const fkpi    = feedData?.kpis;
 
   return (
     <div className="flex flex-col h-screen bg-[#06060e] overflow-hidden">
-      {/* ── Top bar ─────────────────────────────────────────────── */}
+
+      {/* ── Status bar ─────────────────────────────────────────────── */}
       <StatusBar
-        lastFetched={data?.lastFetched ?? null}
-        loading={loading}
-        onRefresh={fetchFeeds}
-        errorCount={data?.errors?.length ?? 0}
-        usingDemoData={data?.usingDemoData}
+        lastFetched={feedData?.lastFetched ?? null}
+        loading={anyLoading}
+        onRefresh={refreshAll}
+        errorCount={(feedData?.errors?.length ?? 0) + (extKpis?.errors?.length ?? 0)}
+        usingDemoData={feedData?.usingDemoData}
       />
 
-      {/* ── KPI + Gauge row ──────────────────────────────────────── */}
+      {/* ── KPI row ────────────────────────────────────────────────── */}
       <div className="flex gap-3 px-4 pt-3 pb-2 shrink-0">
-        {/* Threat Gauge */}
         <ThreatGauge securityItems={secItems} />
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-6 gap-3 flex-1">
+        <div className="grid grid-cols-7 gap-3 flex-1">
+          {/* External live KPIs */}
           <KPICard
-            label="Krit. Warnungen (24h)"
-            value={loading ? "—" : critAlerts}
-            sublabel="BSI · CERT-Bund · CERT-EU"
+            label="KEV aktiv ausgenutzt"
+            value={kpiLoading ? "—" : kev ? kev.total.toLocaleString("de") : "n/v"}
+            sublabel={kev ? `+${kev.newThisWeek} diese Woche` : "CISA KEV"}
             color="red"
-            highlight={critAlerts > 0}
+            highlight={(kev?.newToday ?? 0) > 0}
           />
           <KPICard
-            label="Security News (24h)"
-            value={loading ? "—" : kpis?.securityNews24h ?? "—"}
-            sublabel="Heise · BleepingComputer · Krebs"
+            label="NVD Critical (heute)"
+            value={kpiLoading ? "—" : nvd ? nvd.criticalToday : "n/v"}
+            sublabel={nvd ? `+${nvd.highToday} HIGH` : "NIST NVD"}
             color="orange"
+            highlight={(nvd?.criticalToday ?? 0) > 5}
+          />
+          <KPICard
+            label="Malware-URLs (24h)"
+            value={kpiLoading ? "—" : urlhaus ? urlhaus.urlsAdded24h.toLocaleString("de") : "n/v"}
+            sublabel={urlhaus ? `${urlhaus.urlsOnline.toLocaleString("de")} aktiv online` : "abuse.ch URLhaus"}
+            color="orange"
+          />
+
+          {/* Feed-derived KPIs */}
+          <KPICard
+            label="Krit. Warnungen (24h)"
+            value={feedLoading ? "—" : fkpi?.criticalAdvisories ?? "—"}
+            sublabel="BSI · CERT-Bund · CERT-EU"
+            color="red"
+            highlight={(fkpi?.criticalAdvisories ?? 0) > 0}
           />
           <KPICard
             label="EU Regulierung (7d)"
-            value={loading ? "—" : kpis?.euRegulatory7d ?? "—"}
-            sublabel="EUR-Lex · Rat der EU · EP"
+            value={feedLoading ? "—" : fkpi?.euRegulatory7d ?? "—"}
+            sublabel="EUR-Lex · Rat EU · EP"
             color="amber"
           />
           <KPICard
-            label="Verwaltungs-IT (7d)"
-            value={loading ? "—" : kpis?.govIt7d ?? "—"}
-            sublabel="Bundesregierung · Netzpolitik"
-            color="blue"
-          />
-          <KPICard
             label="Meldungen gesamt"
-            value={loading ? "—" : kpis?.totalItems ?? "—"}
-            sublabel="Gefiltert · Enterprise-relevant"
+            value={feedLoading ? "—" : fkpi?.totalItems ?? "—"}
+            sublabel={feedData?.usingDemoData ? "Demo-Modus" : `${fkpi?.sourcesOk ?? 0}/${fkpi?.sourcesTotal ?? 0} Quellen`}
             color="slate"
           />
-          {/* Activity Chart in last KPI slot */}
-          <ActivityChart categories={data?.categories ?? {}} />
+
+          <ActivityChart categories={feedData?.categories ?? {}} />
         </div>
       </div>
 
-      {/* ── Divider ──────────────────────────────────────────────── */}
+      {/* ── Divider ────────────────────────────────────────────────── */}
       <div className="mx-4 border-t border-slate-800/60 shrink-0" />
 
-      {/* ── Feed Columns ─────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 grid grid-cols-6 gap-3 p-4 pt-3">
-        {COLUMN_ORDER.map((category) => (
+      {/* ── Main grid: 6 news + 1 social ───────────────────────────── */}
+      <div className="flex-1 min-h-0 grid grid-cols-7 gap-3 p-4 pt-3">
+        {NEWS_COLUMNS.map((category) => (
           <FeedColumn
             key={category}
             category={category}
-            items={data?.categories?.[category]?.items ?? []}
-            loading={loading}
+            items={feedData?.categories?.[category]?.items ?? []}
+            loading={feedLoading}
           />
         ))}
+        <SocialColumn
+          posts={socialData?.posts ?? []}
+          loading={socialLoading}
+          usingDemoData={socialData?.usingDemoData}
+        />
       </div>
 
-      {/* ── Footer ───────────────────────────────────────────────── */}
+      {/* ── Footer ─────────────────────────────────────────────────── */}
       <div className="px-4 py-1.5 border-t border-slate-800/40 bg-slate-950/60 flex items-center justify-between shrink-0">
         <span className="text-[10px] text-slate-700">
-          {loading ? "Feeds werden geladen…" : data?.usingDemoData
-            ? "Demo-Modus · Live-Feeds nach Deployment verfügbar"
-            : `${kpis?.sourcesOk ?? 0}/${kpis?.sourcesTotal ?? 0} Quellen aktiv · BSI WID · CERT-Bund · CERT-EU · CVEFeed · Heise · BleepingComputer · Krebs · Golem · Netzpolitik · Bundesregierung · EUR-Lex · Rat der EU · MIT TR · t3n`
-          }
+          News: BSI WID · CERT-Bund · CERT-EU · CVEFeed · Heise · BleepingComputer · Krebs · Golem · Netzpolitik · Bundesregierung · EUR-Lex · Rat der EU · MIT TR · t3n &nbsp;|&nbsp;
+          KPIs: CISA KEV · NIST NVD · abuse.ch URLhaus &nbsp;|&nbsp;
+          Social: Mastodon infosec.exchange · social.bund.de · Bluesky
         </span>
-        <div className="flex items-center gap-3">
-          {!data?.usingDemoData && (
-            <div className="flex items-center gap-1.5">
-              {COLUMN_ORDER.map((cat) => {
-                const cfg = CATEGORY_CONFIG[cat];
-                const count = data?.categories?.[cat]?.items?.length ?? 0;
-                return (
-                  <span key={cat} className={`text-[10px] ${cfg.color}`}>
-                    {cfg.icon} {count}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          <span className="text-[10px] text-slate-700">Auto-Refresh 5 min · INTERN</span>
-        </div>
+        <span className="text-[10px] text-slate-700">
+          News 5min · KPIs 15min · Social 3min · INTERN
+        </span>
       </div>
     </div>
   );
