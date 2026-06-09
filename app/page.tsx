@@ -32,7 +32,6 @@ interface FeedData {
 interface ExternalKPIs {
   cisaKev: { total: number; newThisWeek: number; newToday: number; lastAdded: string } | null;
   nvd: { criticalToday: number; highToday: number } | null;
-  urlhaus: { urlsOnline: number; urlsAdded24h: number } | null;
   fetchedAt: string;
   errors: string[];
 }
@@ -112,10 +111,9 @@ export default function Dashboard() {
     ...(feedData?.categories?.security_news?.items ?? []),
   ];
 
-  const kev     = extKpis?.cisaKev;
-  const nvd     = extKpis?.nvd;
-  const urlhaus = extKpis?.urlhaus;
-  const fkpi    = feedData?.kpis;
+  const kev  = extKpis?.cisaKev;
+  const nvd  = extKpis?.nvd;
+  const fkpi = feedData?.kpis;
 
   return (
     <div className="flex flex-col h-screen bg-[#06060e] overflow-hidden">
@@ -133,7 +131,7 @@ export default function Dashboard() {
       <div className="flex gap-3 px-4 pt-3 pb-2 shrink-0">
         <ThreatGauge securityItems={secItems} />
 
-        <div className="grid grid-cols-7 gap-3 flex-1">
+        <div className="grid grid-cols-6 gap-3 flex-1">
           {/* External live KPIs */}
           <KPICard
             label="KEV aktiv ausgenutzt"
@@ -149,13 +147,6 @@ export default function Dashboard() {
             color="orange"
             highlight={(nvd?.criticalToday ?? 0) > 5}
           />
-          <KPICard
-            label="Malware-URLs (24h)"
-            value={kpiLoading ? "—" : urlhaus ? urlhaus.urlsAdded24h.toLocaleString("de") : "n/v"}
-            sublabel={urlhaus ? `${urlhaus.urlsOnline.toLocaleString("de")} aktiv online` : "abuse.ch URLhaus"}
-            color="orange"
-          />
-
           {/* Feed-derived KPIs */}
           <KPICard
             label="Krit. Warnungen (24h)"

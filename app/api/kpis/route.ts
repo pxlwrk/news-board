@@ -11,10 +11,6 @@ interface ExternalKPIs {
     criticalToday: number;
     highToday: number;
   } | null;
-  urlhaus: {
-    urlsOnline: number;
-    urlsAdded24h: number;
-  } | null;
   fetchedAt: string;
   errors: string[];
 }
@@ -82,38 +78,17 @@ async function fetchNvd() {
   };
 }
 
-async function fetchUrlhaus() {
-  const res = await fetch("https://urlhaus-api.abuse.ch/v1/stats/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: "{}",
-    signal: AbortSignal.timeout(7000),
-  });
-  if (!res.ok) throw new Error(`URLhaus HTTP ${res.status}`);
-  const data = await res.json() as {
-    query_status: string;
-    urls_online: number;
-    urls_added_last_24h?: number;
-  };
-  return {
-    urlsOnline: data.urls_online ?? 0,
-    urlsAdded24h: data.urls_added_last_24h ?? 0,
-  };
-}
-
 export async function GET() {
   const errors: string[] = [];
 
-  const [kev, nvd, urlhaus] = await Promise.all([
+  const [kev, nvd] = await Promise.all([
     fetchCisaKev().catch((e) => { errors.push(`CISA KEV: ${e.message}`); return null; }),
     fetchNvd().catch((e) => { errors.push(`NVD: ${e.message}`); return null; }),
-    fetchUrlhaus().catch((e) => { errors.push(`URLhaus: ${e.message}`); return null; }),
   ]);
 
   const result: ExternalKPIs = {
     cisaKev: kev,
     nvd,
-    urlhaus,
     fetchedAt: new Date().toISOString(),
     errors,
   };

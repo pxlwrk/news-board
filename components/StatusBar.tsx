@@ -35,14 +35,9 @@ export function StatusBar({ lastFetched, loading, errorCount, usingDemoData }: S
         <div className="flex items-center justify-center w-8 h-8 rounded-md bg-blue-600/20 border border-blue-600/30">
           <span className="text-blue-400 text-base">⚡</span>
         </div>
-        <div>
-          <h1 className="text-sm font-bold text-slate-100 leading-tight tracking-tight">
-            CTO Intelligence Dashboard
-          </h1>
-          <p className="text-[10px] text-slate-500 leading-none">
-            Bundesministerium · IT-Lagebild · ~2.500 Arbeitsplätze
-          </p>
-        </div>
+        <h1 className="text-sm font-bold text-slate-100 leading-tight tracking-tight">
+          CTO Intelligence Dashboard
+        </h1>
       </div>
 
       {/* Status indicators */}
