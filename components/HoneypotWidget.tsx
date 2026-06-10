@@ -1,5 +1,5 @@
 "use client";
-import { SicherheitstachoData } from "@/app/api/kpis/route";
+import type { SicherheitstachoData } from "@/lib/kpi-types";
 
 interface Props {
   data: SicherheitstachoData | null;

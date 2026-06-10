@@ -1,5 +1,5 @@
 "use client";
-import { MSRCRelease } from "@/app/api/kpis/route";
+import type { MSRCRelease } from "@/lib/kpi-types";
 
 interface Props {
   data: MSRCRelease | null;

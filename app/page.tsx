@@ -18,7 +18,7 @@ import { GitHubAdvisoryWidget } from "@/components/GitHubAdvisoryWidget";
 import { MSRCWidget } from "@/components/MSRCWidget";
 import { CloudflareWidget } from "@/components/CloudflareWidget";
 import { HoneypotWidget } from "@/components/HoneypotWidget";
-import type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData } from "@/app/api/kpis/route";
+import type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData } from "@/lib/kpi-types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

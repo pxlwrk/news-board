@@ -1,5 +1,5 @@
 "use client";
-import { CloudflareData } from "@/app/api/kpis/route";
+import type { CloudflareData } from "@/lib/kpi-types";
 
 interface Props {
   data: CloudflareData | null;

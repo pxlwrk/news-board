@@ -1,5 +1,5 @@
 "use client";
-import { GHAdvisory } from "@/app/api/kpis/route";
+import type { GHAdvisory } from "@/lib/kpi-types";
 
 interface Props {
   advisories: GHAdvisory[];
