@@ -8,7 +8,10 @@ import { StatusBar } from "@/components/StatusBar";
 import { KPICard } from "@/components/KPICard";
 import { ThreatGauge } from "@/components/ThreatGauge";
 import { ActivityChart } from "@/components/ActivityChart";
-import { GermanyTileMap } from "@/components/GermanyTileMap";
+import { GermanyMap } from "@/components/GermanyMap";
+import { WorldAttackMap } from "@/components/WorldAttackMap";
+import { ThreatRadarChart } from "@/components/ThreatRadarChart";
+import { NetworkTopologyWidget } from "@/components/NetworkTopologyWidget";
 import { AttackVectorChart } from "@/components/AttackVectorChart";
 import { SectorTargetChart } from "@/components/SectorTargetChart";
 import { CVESeverityDonut } from "@/components/CVESeverityDonut";
@@ -124,9 +127,15 @@ export default function Dashboard() {
   const fkpi = feedData?.kpis;
   const anyLoading = feedLoading || kpiLoading || socialLoading;
 
-  // Rotating panel content for center column
+  // Center-top: Attack vectors → World attack map → GitHub advisories
   const centerPanels = [
     <AttackVectorChart key="av" feedItems={allFeedItems} />,
+    <WorldAttackMap
+      key="world"
+      topCountry={extKpis?.sicherheitstacho?.topSourceCountry ?? undefined}
+      attacksPerHour={extKpis?.sicherheitstacho?.attacksLastHour}
+      loading={kpiLoading}
+    />,
     <GitHubAdvisoryWidget
       key="gh"
       advisories={extKpis?.github?.recent ?? []}
@@ -136,20 +145,22 @@ export default function Dashboard() {
     />,
   ];
 
-  // Rotating panel content for right column
+  // Center-bottom: CVE donut → Threat radar
+  const centerBottomPanels = [
+    <CVESeverityDonut key="cve" critical={nvd?.criticalToday ?? 0} high={nvd?.highToday ?? 0} loading={kpiLoading} />,
+    <ThreatRadarChart key="radar" feedItems={allFeedItems} />,
+  ];
+
+  // Right-top: KRITIS sectors → MSRC Patch Tuesday
   const rightPanels = [
     <SectorTargetChart key="st" feedItems={allFeedItems} />,
     <MSRCWidget key="msrc" data={extKpis?.msrc ?? null} loading={kpiLoading} />,
   ];
 
-  // Rotating panel content for KEV/bottom-right slot
+  // Right-bottom: KEV timeline → Honeypot → Cloudflare → Network topology
   const bottomRightPanels = [
-    <KEVTimeline
-      key="kev"
-      total={kev?.total ?? 0}
-      newThisWeek={kev?.newThisWeek ?? 0}
-      loading={kpiLoading}
-    />,
+    <KEVTimeline key="kev" total={kev?.total ?? 0} newThisWeek={kev?.newThisWeek ?? 0} loading={kpiLoading} />,
+    <NetworkTopologyWidget key="nettopo" feedItems={allFeedItems} />,
     <HoneypotWidget key="hp" data={extKpis?.sicherheitstacho ?? null} loading={kpiLoading} />,
     <CloudflareWidget key="cf" data={extKpis?.cloudflare ?? null} loading={kpiLoading} />,
   ];
@@ -208,34 +219,30 @@ export default function Dashboard() {
       </div>
 
       {/* ── Visual analysis section ─────────────────────────────────── */}
-      <div className="grid grid-cols-[auto_1fr_1fr] gap-3 px-4 pb-2 shrink-0" style={{ height: "230px" }}>
+      <div className="grid grid-cols-[auto_1fr_1fr] gap-3 px-4 pb-2 shrink-0" style={{ height: "260px" }}>
 
-        {/* Germany Tile Map */}
-        <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden" style={{ width: "340px" }}>
-          <GermanyTileMap feedItems={allFeedItems} />
+        {/* Germany SVG map */}
+        <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden" style={{ width: "290px" }}>
+          <GermanyMap feedItems={allFeedItems} />
         </div>
 
-        {/* Center: Attack vectors (rotating with GitHub Advisory) + CVE donut */}
+        {/* Center: Attack vectors → World attack map → GitHub Advisory | CVE donut → Threat radar */}
         <div className="grid grid-rows-2 gap-2">
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
-            <RotatingPanel panels={centerPanels} intervalMs={14000} />
+            <RotatingPanel panels={centerPanels} intervalMs={13000} />
           </div>
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
-            <CVESeverityDonut
-              critical={nvd?.criticalToday ?? 0}
-              high={nvd?.highToday ?? 0}
-              loading={kpiLoading}
-            />
+            <RotatingPanel panels={centerBottomPanels} intervalMs={15000} />
           </div>
         </div>
 
-        {/* Right: KRITIS sectors (rotating with MSRC) + KEV timeline (rotating with Honeypot/Cloudflare) */}
+        {/* Right: KRITIS sectors → MSRC | KEV → Network topology → Honeypot → Cloudflare */}
         <div className="grid grid-rows-2 gap-2">
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
-            <RotatingPanel panels={rightPanels} intervalMs={16000} />
+            <RotatingPanel panels={rightPanels} intervalMs={17000} />
           </div>
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
-            <RotatingPanel panels={bottomRightPanels} intervalMs={12000} />
+            <RotatingPanel panels={bottomRightPanels} intervalMs={11000} />
           </div>
         </div>
       </div>
