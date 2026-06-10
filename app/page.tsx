@@ -180,7 +180,7 @@ export default function Dashboard() {
       {/* ── KPI row (compact) ──────────────────────────────────────── */}
       <div className="flex gap-2 px-4 pt-1.5 pb-1.5">
         <ThreatGauge securityItems={secItems} compact />
-        <div className="grid grid-cols-5 gap-2 flex-1">
+        <div className="grid grid-cols-4 gap-2 flex-1">
           <KPICard compact
             label="KEV ausgenutzt"
             value={kpiLoading ? "—" : kev ? kev.total.toLocaleString("de") : "n/v"}
@@ -201,12 +201,6 @@ export default function Dashboard() {
             sublabel="BSI · CERT-Bund · CERT-EU"
             color="red"
             highlight={(fkpi?.criticalAdvisories ?? 0) > 0}
-          />
-          <KPICard compact
-            label="EU Regulierung 7d"
-            value={feedLoading ? "—" : fkpi?.euRegulatory7d ?? "—"}
-            sublabel="EUR-Lex · Rat EU · EP"
-            color="amber"
           />
           <KPICard compact
             label="Angriffe / Stunde"
