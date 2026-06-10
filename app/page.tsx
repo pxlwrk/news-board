@@ -10,7 +10,6 @@ import { ThreatGauge } from "@/components/ThreatGauge";
 import { GermanyMap } from "@/components/GermanyMap";
 import { WorldAttackMap } from "@/components/WorldAttackMap";
 import { ThreatRadarChart } from "@/components/ThreatRadarChart";
-import { NetworkTopologyWidget } from "@/components/NetworkTopologyWidget";
 import { AttackVectorChart } from "@/components/AttackVectorChart";
 import { SectorTargetChart } from "@/components/SectorTargetChart";
 import { CVESeverityDonut } from "@/components/CVESeverityDonut";
@@ -20,7 +19,9 @@ import { GitHubAdvisoryWidget } from "@/components/GitHubAdvisoryWidget";
 import { MSRCWidget } from "@/components/MSRCWidget";
 import { CloudflareWidget } from "@/components/CloudflareWidget";
 import { HoneypotWidget } from "@/components/HoneypotWidget";
-import type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData } from "@/lib/kpi-types";
+import { ISCSansWidget } from "@/components/ISCSansWidget";
+import { ThreatFoxWidget } from "@/components/ThreatFoxWidget";
+import type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData, ISCSansData, ThreatFoxData } from "@/lib/kpi-types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,8 @@ interface ExternalKPIs {
   msrc: MSRCRelease | null;
   cloudflare: CloudflareData | null;
   sicherheitstacho: SicherheitstachoData | null;
+  iscSans: ISCSansData | null;
+  threatfox: ThreatFoxData | null;
   fetchedAt: string;
   errors: string[];
 }
@@ -133,10 +136,11 @@ export default function Dashboard() {
     <CVESeverityDonut key="cve" critical={nvd?.criticalToday ?? 0} high={nvd?.highToday ?? 0} loading={kpiLoading} />,
   ];
 
-  // Left charts column 3: Network topology, MSRC, KEV, Honeypot, Cloudflare, GitHub advisories
+  // Left charts column 3: MSRC, KEV, Honeypot, Cloudflare, ISC/SANS, ThreatFox, GitHub advisories
   const chartCol3 = [
-    <NetworkTopologyWidget key="nettopo" feedItems={allFeedItems} />,
     <MSRCWidget key="msrc" data={extKpis?.msrc ?? null} loading={kpiLoading} />,
+    <ISCSansWidget key="isc" data={extKpis?.iscSans ?? null} loading={kpiLoading} />,
+    <ThreatFoxWidget key="tf" data={extKpis?.threatfox ?? null} loading={kpiLoading} />,
     <KEVTimeline key="kev" total={kev?.total ?? 0} newThisWeek={kev?.newThisWeek ?? 0} loading={kpiLoading} />,
     <HoneypotWidget key="hp" data={extKpis?.sicherheitstacho ?? null} loading={kpiLoading} />,
     <CloudflareWidget key="cf" data={extKpis?.cloudflare ?? null} loading={kpiLoading} />,

@@ -31,3 +31,14 @@ export interface SicherheitstachoData {
   topProtocol: string;
   topSourceCountry: string;
 }
+
+export interface ISCSansData {
+  infocon: string; // "green" | "yellow" | "orange" | "red"
+  topPorts: Array<{ port: number; count: number }>;
+}
+
+export interface ThreatFoxData {
+  totalIOCs: number;
+  byType: Array<{ type: string; count: number }>;
+  topMalware: string;
+}

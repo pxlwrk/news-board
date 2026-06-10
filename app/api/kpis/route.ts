@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData } from "@/lib/kpi-types";
+import type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData, ISCSansData, ThreatFoxData } from "@/lib/kpi-types";
 
-export type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData };
+export type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData, ISCSansData, ThreatFoxData };
 
 interface KPIsResponse {
   cisaKev: { total: number; newThisWeek: number; newToday: number; lastAdded: string } | null;
@@ -10,6 +10,8 @@ interface KPIsResponse {
   msrc: MSRCRelease | null;
   cloudflare: CloudflareData | null;
   sicherheitstacho: SicherheitstachoData | null;
+  iscSans: ISCSansData | null;
+  threatfox: ThreatFoxData | null;
   fetchedAt: string;
   errors: string[];
 }
@@ -164,53 +166,118 @@ async function fetchCloudflare(): Promise<CloudflareData> {
 }
 
 async function fetchSicherheitstacho(): Promise<SicherheitstachoData> {
-  const res = await fetch("https://sicherheitstacho.eu/api/1/sensor?type=attack&period=1hour", {
-    headers: { "Accept": "application/json", "User-Agent": "CTO-Dashboard/1.0" },
-    signal: AbortSignal.timeout(7000),
-  });
-  if (!res.ok) throw new Error(`ST HTTP ${res.status}`);
-  const data = await res.json() as {
-    count?: number; total?: number;
-    topPort?: number; topProtocol?: string; topCountry?: string;
-    attacks?: Array<{ port?: number; protocol?: string; sourceCountry?: string }>;
-  };
+  // Try multiple endpoint variants — the API has changed over time
+  const endpoints = [
+    "https://sicherheitstacho.eu/api/live/attacksPerHour",
+    "https://sicherheitstacho.eu/api/1/sensor?type=attack&period=last1Hours",
+    "https://sicherheitstacho.eu/api/1/sensor?type=attack&period=1hour",
+  ];
+  const hdrs = { "Accept": "application/json", "User-Agent": "Mozilla/5.0 CTO-Dashboard/1.0" };
 
-  // Handle both array and summary response formats
-  if (Array.isArray(data)) {
-    const arr = data as Array<{ port?: number; protocol?: string; sourceCountry?: string }>;
-    const portMap: Record<string, number> = {}, protoMap: Record<string, number> = {}, ctryMap: Record<string, number> = {};
-    for (const a of arr) {
-      if (a.port)          portMap[a.port]  = (portMap[a.port]  || 0) + 1;
-      if (a.protocol)      protoMap[a.protocol] = (protoMap[a.protocol] || 0) + 1;
-      if (a.sourceCountry) ctryMap[a.sourceCountry] = (ctryMap[a.sourceCountry] || 0) + 1;
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { headers: hdrs, signal: AbortSignal.timeout(5000) });
+      if (!res.ok) continue;
+      const data = await res.json() as {
+        attacksPerHour?: number; count?: number; total?: number;
+        topPort?: number; topProtocol?: string; topCountry?: string; topSourceCountry?: string;
+      };
+
+      if (Array.isArray(data)) {
+        const arr = data as Array<{ port?: number; protocol?: string; sourceCountry?: string }>;
+        const portMap: Record<string, number> = {}, protoMap: Record<string, number> = {}, ctryMap: Record<string, number> = {};
+        for (const a of arr) {
+          if (a.port)          portMap[a.port]  = (portMap[a.port]  || 0) + 1;
+          if (a.protocol)      protoMap[a.protocol] = (protoMap[a.protocol] || 0) + 1;
+          if (a.sourceCountry) ctryMap[a.sourceCountry] = (ctryMap[a.sourceCountry] || 0) + 1;
+        }
+        return {
+          attacksLastHour: arr.length,
+          topPort:    parseInt(Object.entries(portMap).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "22"),
+          topProtocol: Object.entries(protoMap).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "TCP",
+          topSourceCountry: Object.entries(ctryMap).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "CN",
+        };
+      }
+      const attacks = data.attacksPerHour ?? data.count ?? data.total;
+      if (attacks != null) {
+        return {
+          attacksLastHour: attacks,
+          topPort: data.topPort ?? 22,
+          topProtocol: data.topProtocol ?? "TCP",
+          topSourceCountry: data.topCountry ?? data.topSourceCountry ?? "—",
+        };
+      }
+    } catch { /* try next endpoint */ }
+  }
+  throw new Error("All endpoints unavailable");
+}
+
+async function fetchISCSans(): Promise<ISCSansData> {
+  const [infoRes, portsRes] = await Promise.all([
+    fetch("https://isc.sans.edu/api/infocon.json",       { signal: AbortSignal.timeout(6000) }),
+    fetch("https://isc.sans.edu/api/topports/asc/10?json", { signal: AbortSignal.timeout(6000) }),
+  ]);
+
+  const infocon = infoRes.ok
+    ? ((await infoRes.json()) as { status?: string }).status ?? "green"
+    : "green";
+
+  const topPorts: ISCSansData["topPorts"] = [];
+  if (portsRes.ok) {
+    const raw = await portsRes.json() as Array<{ port?: number | string; records?: number | string; count?: number | string }>;
+    if (Array.isArray(raw)) {
+      for (const p of raw.slice(0, 6)) {
+        const port  = typeof p.port    === "string" ? parseInt(p.port)    : p.port;
+        const count = typeof p.records === "string" ? parseInt(p.records) :
+                      typeof p.count   === "string" ? parseInt(p.count)   : (p.records ?? p.count);
+        if (port && count) topPorts.push({ port, count });
+      }
     }
-    const topPort    = parseInt(Object.entries(portMap).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "22");
-    const topProto   = Object.entries(protoMap).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "TCP";
-    const topCountry = Object.entries(ctryMap).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "CN";
-    return { attacksLastHour: arr.length, topPort, topProtocol: topProto, topSourceCountry: topCountry };
   }
 
-  return {
-    attacksLastHour: data.count ?? data.total ?? 0,
-    topPort: data.topPort ?? 22,
-    topProtocol: data.topProtocol ?? "TCP",
-    topSourceCountry: data.topCountry ?? "—",
-  };
+  return { infocon, topPorts };
+}
+
+async function fetchThreatFox(): Promise<ThreatFoxData> {
+  const res = await fetch("https://threatfox.abuse.ch/export/json/recent/", {
+    headers: { "Accept": "application/json", "User-Agent": "CTO-Dashboard/1.0" },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`ThreatFox HTTP ${res.status}`);
+
+  const raw = await res.json() as Record<string, unknown> | Array<{ ioc_type?: string; malware?: string }>;
+  const items = Array.isArray(raw) ? raw : (raw as { data?: Array<{ ioc_type?: string; malware?: string }> }).data ?? [];
+
+  const typeMap: Record<string, number> = {};
+  const malwareMap: Record<string, number> = {};
+  for (const item of items) {
+    if (item.ioc_type) typeMap[item.ioc_type] = (typeMap[item.ioc_type] || 0) + 1;
+    if (item.malware)  malwareMap[item.malware] = (malwareMap[item.malware] || 0) + 1;
+  }
+  const byType = Object.entries(typeMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([type, count]) => ({ type, count }));
+  const topMalware = Object.entries(malwareMap).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "—";
+
+  return { totalIOCs: items.length, byType, topMalware };
 }
 
 // ── Handler ────────────────────────────────────────────────────────────────
 
 export async function GET() {
   const errors: string[] = [];
-  const [kev, nvd, github, msrc, cloudflare, sicherheitstacho] = await Promise.all([
-    fetchCisaKev()       .catch(e => { errors.push(`CISA KEV: ${e.message}`);        return null; }),
-    fetchNvd()           .catch(e => { errors.push(`NVD: ${e.message}`);             return null; }),
-    fetchGitHub()        .catch(e => { errors.push(`GitHub: ${e.message}`);          return null; }),
-    fetchMSRC()          .catch(e => { errors.push(`MSRC: ${e.message}`);            return null; }),
-    fetchCloudflare()    .catch(e => { errors.push(`Cloudflare: ${e.message}`);      return null; }),
-    fetchSicherheitstacho().catch(e => { errors.push(`Sicherheitstacho: ${e.message}`); return null; }),
+  const [kev, nvd, github, msrc, cloudflare, sicherheitstacho, iscSans, threatfox] = await Promise.all([
+    fetchCisaKev()          .catch(e => { errors.push(`CISA KEV: ${e.message}`);          return null; }),
+    fetchNvd()              .catch(e => { errors.push(`NVD: ${e.message}`);               return null; }),
+    fetchGitHub()           .catch(e => { errors.push(`GitHub: ${e.message}`);            return null; }),
+    fetchMSRC()             .catch(e => { errors.push(`MSRC: ${e.message}`);              return null; }),
+    fetchCloudflare()       .catch(e => { errors.push(`Cloudflare: ${e.message}`);        return null; }),
+    fetchSicherheitstacho() .catch(e => { errors.push(`Sicherheitstacho: ${e.message}`);  return null; }),
+    fetchISCSans()          .catch(e => { errors.push(`ISC/SANS: ${e.message}`);          return null; }),
+    fetchThreatFox()        .catch(e => { errors.push(`ThreatFox: ${e.message}`);         return null; }),
   ]);
 
-  const result: KPIsResponse = { cisaKev: kev, nvd, github, msrc, cloudflare, sicherheitstacho, fetchedAt: new Date().toISOString(), errors };
+  const result: KPIsResponse = {
+    cisaKev: kev, nvd, github, msrc, cloudflare, sicherheitstacho, iscSans, threatfox,
+    fetchedAt: new Date().toISOString(), errors,
+  };
   return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
 }

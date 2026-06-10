@@ -17,55 +17,42 @@ export function NewsCard({ item, index }: NewsCardProps) {
   })();
 
   const ageMs = Date.now() - new Date(item.pubDate).getTime();
-  const isNew = ageMs < 15 * 60 * 1000; // ungelesen: < 15 Minuten
+  const isNew = ageMs < 15 * 60 * 1000;
 
   const shortTime = timeAgo
     .replace("vor ", "").replace(" Stunden", "h").replace(" Stunde", "h")
     .replace(" Minuten", "m").replace(" Minute", "m")
     .replace(" Tagen", "d").replace(" Tag", "d");
 
+  const borderClass = isNew
+    ? config.borderColor.replace(/^border-(\S+)$/, "border-l-$1")
+    : "border-l-transparent";
+
   return (
     <a
       href={item.link}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group flex items-start gap-2 px-2.5 py-2 rounded border-l-2 transition-all duration-150
-        hover:bg-slate-800/60 cursor-pointer
+      className={`flex flex-col px-2.5 py-2 border-l-2 cursor-pointer transition-colors
         ${index % 2 === 0 ? "bg-slate-900/20" : "bg-transparent"}
-        ${isNew ? config.borderColor.replace("border", "border-l") : "border-l-transparent"}
+        hover:bg-slate-800/50
+        ${borderClass}
         ${isNew ? "" : "opacity-40"}`}
     >
-      {/* Index */}
-      <span className="text-[10px] text-slate-700 tabular-nums pt-0.5 w-4 shrink-0 text-right">
-        {index + 1}
-      </span>
+      {/* Headline — groß und hochkontrastig */}
+      <p className={`text-[12px] font-semibold leading-snug line-clamp-2 ${isNew ? "text-slate-50" : "text-slate-300"}`}>
+        {item.title}
+      </p>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-          <span className={`text-[9px] font-bold uppercase tracking-wider shrink-0 ${config.color}`}>
-            {item.source}
-          </span>
-          {isNew && (
-            <span className={`inline-flex items-center gap-0.5 text-[7px] font-black uppercase px-1 py-0.5 rounded ${config.bgColor} ${config.color} shrink-0`}>
-              <span className="w-1 h-1 rounded-full animate-pulse" style={{ background: "currentColor" }} />
-              NEU
-            </span>
-          )}
-          {item.language === "en" && (
-            <span className="text-[8px] text-slate-600 uppercase shrink-0">EN</span>
-          )}
-        </div>
-        <p className={`text-[11px] leading-snug transition-colors line-clamp-2
-          ${isNew ? "text-slate-200" : "text-slate-500"}`}>
-          {item.title}
-        </p>
+      {/* Meta-Zeile subtle darunter */}
+      <div className="flex items-center gap-1.5 mt-1 min-w-0">
+        {isNew && (
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 animate-pulse ${config.color.replace("text-", "bg-")}`} />
+        )}
+        <span className={`text-[9px] font-semibold truncate opacity-70 ${config.color}`}>{item.source}</span>
+        {item.language === "en" && <span className="text-[8px] text-slate-700 shrink-0">EN</span>}
+        <span className="text-[9px] text-slate-600 shrink-0 ml-auto">{shortTime}</span>
       </div>
-
-      {/* Time */}
-      <span className="text-[9px] text-slate-600 shrink-0 pt-0.5 whitespace-nowrap">
-        {shortTime}
-      </span>
     </a>
   );
 }
