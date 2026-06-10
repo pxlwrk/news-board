@@ -33,7 +33,7 @@ function arcPath(startDeg: number, endDeg: number, r: number): string {
   return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
 }
 
-export function ThreatGauge({ securityItems }: { securityItems: FeedItem[] }) {
+export function ThreatGauge({ securityItems, compact }: { securityItems: FeedItem[]; compact?: boolean }) {
   const level = assess(securityItems);
   const lv = LEVELS[level];
 
@@ -49,9 +49,9 @@ export function ThreatGauge({ securityItems }: { securityItems: FeedItem[] }) {
   const ny = 50 + 28 * Math.sin(toRad(needleDeg));
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-3 rounded-lg border border-slate-700/50 bg-slate-900/40 h-full min-w-[140px]">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1">Bedrohungslage</div>
-      <svg viewBox="0 0 100 65" className="w-28 h-[4.5rem]" overflow="visible">
+    <div className={`flex flex-col items-center justify-center ${compact ? "px-3 py-2 min-w-[120px]" : "px-4 py-3 min-w-[140px]"} rounded-lg border border-slate-700/50 bg-slate-900/40 h-full`}>
+      <div className="text-[9px] font-semibold uppercase tracking-widest text-slate-500 mb-0.5">Bedrohungslage</div>
+      <svg viewBox="0 0 100 65" className={compact ? "w-20 h-[3.2rem]" : "w-28 h-[4.5rem]"} overflow="visible">
         {/* Background arcs */}
         {LEVELS.map((l, i) => (
           <path
@@ -70,7 +70,7 @@ export function ThreatGauge({ securityItems }: { securityItems: FeedItem[] }) {
         <circle cx="50" cy="50" r="3.5" fill={lv.color} />
         <circle cx="50" cy="50" r="1.5" fill="#0f172a" />
       </svg>
-      <div className="text-sm font-bold tracking-widest mt-0.5" style={{ color: lv.color }}>
+      <div className={`${compact ? "text-xs" : "text-sm"} font-bold tracking-widest mt-0.5`} style={{ color: lv.color }}>
         {lv.label}
         {level === 3 && (
           <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />

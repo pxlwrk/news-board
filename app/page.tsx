@@ -7,7 +7,6 @@ import { SocialColumn } from "@/components/SocialColumn";
 import { StatusBar } from "@/components/StatusBar";
 import { KPICard } from "@/components/KPICard";
 import { ThreatGauge } from "@/components/ThreatGauge";
-import { ActivityChart } from "@/components/ActivityChart";
 import { GermanyMap } from "@/components/GermanyMap";
 import { WorldAttackMap } from "@/components/WorldAttackMap";
 import { ThreatRadarChart } from "@/components/ThreatRadarChart";
@@ -60,11 +59,6 @@ interface SocialData {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
-
-const NEWS_COLUMNS: FeedCategory[] = [
-  "security_critical", "security_news", "government_it",
-  "eu_policy", "tech_trends", "ai_innovation",
-];
 
 const FEED_REFRESH_MS   = 5  * 60 * 1000;
 const KPI_REFRESH_MS    = 15 * 60 * 1000;
@@ -127,48 +121,51 @@ export default function Dashboard() {
   const fkpi = feedData?.kpis;
   const anyLoading = feedLoading || kpiLoading || socialLoading;
 
-  // Center-top: Attack vectors → World attack map → GitHub advisories
-  const centerPanels = [
+  // Left charts column 1: Attack vectors ↔ Sector targets
+  const chartCol1 = [
     <AttackVectorChart key="av" feedItems={allFeedItems} />,
-    <WorldAttackMap
-      key="world"
-      topCountry={extKpis?.sicherheitstacho?.topSourceCountry ?? undefined}
-      attacksPerHour={extKpis?.sicherheitstacho?.attacksLastHour}
-      loading={kpiLoading}
-    />,
-    <GitHubAdvisoryWidget
-      key="gh"
-      advisories={extKpis?.github?.recent ?? []}
-      criticalCount={extKpis?.github?.criticalCount ?? 0}
-      highCount={extKpis?.github?.highCount ?? 0}
-      loading={kpiLoading}
-    />,
-  ];
-
-  // Center-bottom: CVE donut → Threat radar
-  const centerBottomPanels = [
-    <CVESeverityDonut key="cve" critical={nvd?.criticalToday ?? 0} high={nvd?.highToday ?? 0} loading={kpiLoading} />,
-    <ThreatRadarChart key="radar" feedItems={allFeedItems} />,
-  ];
-
-  // Right-top: KRITIS sectors → MSRC Patch Tuesday
-  const rightPanels = [
     <SectorTargetChart key="st" feedItems={allFeedItems} />,
-    <MSRCWidget key="msrc" data={extKpis?.msrc ?? null} loading={kpiLoading} />,
   ];
 
-  // Right-bottom: KEV timeline → Honeypot → Cloudflare → Network topology
-  const bottomRightPanels = [
-    <KEVTimeline key="kev" total={kev?.total ?? 0} newThisWeek={kev?.newThisWeek ?? 0} loading={kpiLoading} />,
+  // Left charts column 2: Threat radar ↔ CVE donut
+  const chartCol2 = [
+    <ThreatRadarChart key="radar" feedItems={allFeedItems} />,
+    <CVESeverityDonut key="cve" critical={nvd?.criticalToday ?? 0} high={nvd?.highToday ?? 0} loading={kpiLoading} />,
+  ];
+
+  // Left charts column 3: Network topology, MSRC, KEV, Honeypot, Cloudflare, GitHub advisories
+  const chartCol3 = [
     <NetworkTopologyWidget key="nettopo" feedItems={allFeedItems} />,
+    <MSRCWidget key="msrc" data={extKpis?.msrc ?? null} loading={kpiLoading} />,
+    <KEVTimeline key="kev" total={kev?.total ?? 0} newThisWeek={kev?.newThisWeek ?? 0} loading={kpiLoading} />,
     <HoneypotWidget key="hp" data={extKpis?.sicherheitstacho ?? null} loading={kpiLoading} />,
     <CloudflareWidget key="cf" data={extKpis?.cloudflare ?? null} loading={kpiLoading} />,
+    <GitHubAdvisoryWidget key="gh" advisories={extKpis?.github?.recent ?? []} criticalCount={extKpis?.github?.criticalCount ?? 0} highCount={extKpis?.github?.highCount ?? 0} loading={kpiLoading} />,
+  ];
+
+  // Right: feed groups (3 columns each, rotating every 35s)
+  const feedGroups = [
+    <div key="fg1" className="grid grid-cols-3 gap-2 h-full">
+      <FeedColumn category="security_critical" items={feedData?.categories?.security_critical?.items ?? []} loading={feedLoading} />
+      <FeedColumn category="security_news"     items={feedData?.categories?.security_news?.items ?? []}     loading={feedLoading} />
+      <FeedColumn category="government_it"     items={feedData?.categories?.government_it?.items ?? []}     loading={feedLoading} />
+    </div>,
+    <div key="fg2" className="grid grid-cols-3 gap-2 h-full">
+      <FeedColumn category="eu_policy"     items={feedData?.categories?.eu_policy?.items ?? []}     loading={feedLoading} />
+      <FeedColumn category="tech_trends"   items={feedData?.categories?.tech_trends?.items ?? []}   loading={feedLoading} />
+      <FeedColumn category="ai_innovation" items={feedData?.categories?.ai_innovation?.items ?? []} loading={feedLoading} />
+    </div>,
+    <div key="fg3" className="grid grid-cols-3 gap-2 h-full">
+      <FeedColumn category="security_critical" items={feedData?.categories?.security_critical?.items ?? []} loading={feedLoading} />
+      <SocialColumn posts={socialData?.posts ?? []} loading={socialLoading} usingDemoData={socialData?.usingDemoData} />
+      <FeedColumn category="eu_policy" items={feedData?.categories?.eu_policy?.items ?? []} loading={feedLoading} />
+    </div>,
   ];
 
   return (
     <div
       className="bg-[#06060e] overflow-hidden"
-      style={{ display: "grid", height: "100vh", gridTemplateRows: "auto auto 300px 1px 1fr auto" }}
+      style={{ display: "grid", height: "100vh", gridTemplateRows: "auto auto 1fr auto" }}
     >
 
       {/* ── Status bar ─────────────────────────────────────────────── */}
@@ -180,106 +177,95 @@ export default function Dashboard() {
         usingDemoData={feedData?.usingDemoData}
       />
 
-      {/* ── KPI row ────────────────────────────────────────────────── */}
-      <div className="flex gap-3 px-4 pt-2 pb-2">
-        <ThreatGauge securityItems={secItems} />
-        <div className="grid grid-cols-6 gap-3 flex-1">
-          <KPICard
-            label="KEV aktiv ausgenutzt"
+      {/* ── KPI row (compact) ──────────────────────────────────────── */}
+      <div className="flex gap-2 px-4 pt-1.5 pb-1.5">
+        <ThreatGauge securityItems={secItems} compact />
+        <div className="grid grid-cols-5 gap-2 flex-1">
+          <KPICard compact
+            label="KEV ausgenutzt"
             value={kpiLoading ? "—" : kev ? kev.total.toLocaleString("de") : "n/v"}
             sublabel={kev ? `+${kev.newThisWeek} diese Woche` : "CISA KEV"}
             color="red"
             highlight={(kev?.newToday ?? 0) > 0}
           />
-          <KPICard
-            label="NVD Critical (heute)"
+          <KPICard compact
+            label="NVD Critical heute"
             value={kpiLoading ? "—" : nvd ? nvd.criticalToday : "n/v"}
             sublabel={nvd ? `+${nvd.highToday} HIGH` : "NIST NVD"}
             color="orange"
             highlight={(nvd?.criticalToday ?? 0) > 5}
           />
-          <KPICard
-            label="Krit. Warnungen (24h)"
+          <KPICard compact
+            label="Krit. Warnungen 24h"
             value={feedLoading ? "—" : fkpi?.criticalAdvisories ?? "—"}
             sublabel="BSI · CERT-Bund · CERT-EU"
             color="red"
             highlight={(fkpi?.criticalAdvisories ?? 0) > 0}
           />
-          <KPICard
-            label="EU Regulierung (7d)"
+          <KPICard compact
+            label="EU Regulierung 7d"
             value={feedLoading ? "—" : fkpi?.euRegulatory7d ?? "—"}
             sublabel="EUR-Lex · Rat EU · EP"
             color="amber"
           />
-          <KPICard
-            label="Meldungen gesamt"
-            value={feedLoading ? "—" : fkpi?.totalItems ?? "—"}
-            sublabel={feedData?.usingDemoData ? "Demo-Modus" : `${fkpi?.sourcesOk ?? 0}/${fkpi?.sourcesTotal ?? 0} Quellen`}
-            color="slate"
+          <KPICard compact
+            label="Angriffe / Stunde"
+            value={kpiLoading ? "—" : extKpis?.sicherheitstacho?.attacksLastHour?.toLocaleString("de") ?? "n/v"}
+            sublabel={extKpis?.sicherheitstacho ? `Top: ${extKpis.sicherheitstacho.topSourceCountry} · Port ${extKpis.sicherheitstacho.topPort}` : "DT Sicherheitstacho"}
+            color="orange"
+            highlight={(extKpis?.sicherheitstacho?.attacksLastHour ?? 0) > 50000}
           />
-          <ActivityChart categories={feedData?.categories ?? {}} />
         </div>
       </div>
 
-      {/* ── Visual analysis section (300px grid row) ───────────────── */}
-      <div className="grid grid-cols-[290px_1fr_1fr] gap-3 px-4 pb-2 overflow-hidden">
+      {/* ── Main content: left visuals | right feeds ───────────────── */}
+      <div className="grid grid-cols-[3fr_2fr] gap-3 px-4 pb-2 overflow-hidden min-h-0">
 
-        {/* Germany SVG map */}
-        <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden min-h-0">
-          <GermanyMap feedItems={allFeedItems} />
+        {/* ── Left: maps + chart panels ──────────────────────────── */}
+        <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
+
+          {/* Maps row */}
+          <div className="flex gap-2 shrink-0" style={{ height: "220px" }}>
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden" style={{ width: "215px" }}>
+              <GermanyMap feedItems={allFeedItems} />
+            </div>
+            <div className="flex-1 rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+              <WorldAttackMap
+                topCountry={extKpis?.sicherheitstacho?.topSourceCountry ?? undefined}
+                attacksPerHour={extKpis?.sicherheitstacho?.attacksLastHour}
+                loading={kpiLoading}
+              />
+            </div>
+          </div>
+
+          {/* Chart panels (3 columns) */}
+          <div className="flex-1 min-h-0 grid grid-cols-3 gap-2">
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
+              <RotatingPanel panels={chartCol1} intervalMs={20000} />
+            </div>
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
+              <RotatingPanel panels={chartCol2} intervalMs={18000} />
+            </div>
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
+              <RotatingPanel panels={chartCol3} intervalMs={13000} />
+            </div>
+          </div>
         </div>
 
-        {/* Center: Attack vectors → World attack map → GitHub Advisory | CVE donut → Threat radar */}
-        <div className="grid grid-rows-2 gap-2 min-h-0">
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
-            <RotatingPanel panels={centerPanels} intervalMs={13000} />
-          </div>
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
-            <RotatingPanel panels={centerBottomPanels} intervalMs={15000} />
-          </div>
+        {/* ── Right: rotating feed groups ────────────────────────── */}
+        <div className="overflow-hidden min-h-0">
+          <RotatingPanel panels={feedGroups} intervalMs={35000} />
         </div>
-
-        {/* Right: KRITIS sectors → MSRC | KEV → Network topology → Honeypot → Cloudflare */}
-        <div className="grid grid-rows-2 gap-2 min-h-0">
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
-            <RotatingPanel panels={rightPanels} intervalMs={17000} />
-          </div>
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
-            <RotatingPanel panels={bottomRightPanels} intervalMs={11000} />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Divider ────────────────────────────────────────────────── */}
-      <div className="mx-4 border-t border-slate-800/60" />
-
-      {/* ── Feed columns (7: 6 news + social) ──────────────────────── */}
-      <div className="grid grid-cols-7 gap-3 p-4 pt-2 overflow-hidden min-h-0">
-        {NEWS_COLUMNS.map((category) => (
-          <FeedColumn
-            key={category}
-            category={category}
-            items={feedData?.categories?.[category]?.items ?? []}
-            loading={feedLoading}
-          />
-        ))}
-        <SocialColumn
-          posts={socialData?.posts ?? []}
-          loading={socialLoading}
-          usingDemoData={socialData?.usingDemoData}
-        />
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
       <div className="px-4 py-1 border-t border-slate-800/40 bg-slate-950/60 flex items-center justify-between">
-        <span className="text-[10px] text-slate-700">
-          News: BSI WID · CERT-Bund · CERT-EU · CVEFeed · Heise · BleepingComputer · Krebs · Golem · Netzpolitik · Bundesregierung · EUR-Lex · Rat der EU · MIT TR · t3n &nbsp;|&nbsp;
-          KPIs: CISA KEV · NIST NVD · GitHub Advisory · MSRC · Cloudflare Radar · DT Sicherheitstacho &nbsp;|&nbsp;
-          Social: Mastodon infosec.exchange · social.bund.de · Bluesky
+        <span className="text-[9px] text-slate-700">
+          BSI WID · CERT-Bund · CERT-EU · CVEFeed · Heise · BleepingComputer · Krebs · Golem · Netzpolitik · Bundesregierung · EUR-Lex · MIT TR · t3n &nbsp;|&nbsp;
+          CISA KEV · NIST NVD · GitHub Advisory · MSRC · Cloudflare Radar · DT Sicherheitstacho &nbsp;|&nbsp;
+          Mastodon infosec.exchange · social.bund.de · Bluesky
         </span>
-        <span className="text-[10px] text-slate-700">
-          News 5min · KPIs 15min · Social 3min · Panels rotieren 12-16s · INTERN
-        </span>
+        <span className="text-[9px] text-slate-700 shrink-0 ml-4">Feeds 35s · Charts 13-20s · INTERN</span>
       </div>
     </div>
   );

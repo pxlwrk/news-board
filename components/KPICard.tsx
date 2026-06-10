@@ -6,6 +6,7 @@ interface KPICardProps {
   sublabel?: string;
   color: "red" | "orange" | "blue" | "amber" | "slate" | "emerald";
   highlight?: boolean;
+  compact?: boolean;
 }
 
 const COLORS = {
@@ -17,18 +18,18 @@ const COLORS = {
   emerald: { val: "text-emerald-400", bg: "bg-emerald-950/30", border: "border-emerald-800/40" },
 };
 
-export function KPICard({ label, value, sublabel, color, highlight }: KPICardProps) {
+export function KPICard({ label, value, sublabel, color, highlight, compact }: KPICardProps) {
   const c = COLORS[color];
   return (
-    <div className={`flex flex-col justify-between px-4 py-3 rounded-lg border ${c.bg} ${c.border} ${highlight ? "ring-1 ring-red-600/40" : ""}`}>
-      <div className={`text-[10px] font-semibold uppercase tracking-widest text-slate-500 leading-none mb-1.5`}>
+    <div className={`flex flex-col justify-between ${compact ? "px-3 py-2" : "px-4 py-3"} rounded-lg border ${c.bg} ${c.border} ${highlight ? "ring-1 ring-red-600/40" : ""}`}>
+      <div className="text-[9px] font-semibold uppercase tracking-widest text-slate-500 leading-none mb-1">
         {label}
       </div>
-      <div className={`text-3xl font-bold tabular-nums leading-none ${c.val}`}>
+      <div className={`${compact ? "text-xl" : "text-3xl"} font-bold tabular-nums leading-none ${c.val}`}>
         {value}
       </div>
       {sublabel && (
-        <div className="text-[10px] text-slate-600 mt-1 leading-none">{sublabel}</div>
+        <div className="text-[9px] text-slate-600 mt-0.5 leading-none">{sublabel}</div>
       )}
     </div>
   );
