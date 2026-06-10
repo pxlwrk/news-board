@@ -7,6 +7,7 @@ interface FeedColumnProps {
   category: FeedCategory;
   items: FeedItem[];
   loading?: boolean;
+  failedSources?: string[];
 }
 
 function SkeletonRow({ idx }: { idx: number }) {
@@ -23,7 +24,7 @@ function SkeletonRow({ idx }: { idx: number }) {
   );
 }
 
-export function FeedColumn({ category, items, loading }: FeedColumnProps) {
+export function FeedColumn({ category, items, loading, failedSources }: FeedColumnProps) {
   const config = CATEGORY_CONFIG[category];
   const innerRef = useRef<HTMLDivElement>(null);
   const outerRef = useRef<HTMLDivElement>(null);
@@ -57,6 +58,14 @@ export function FeedColumn({ category, items, loading }: FeedColumnProps) {
           </span>
         )}
       </div>
+
+      {/* Failed-source warning strip */}
+      {failedSources && failedSources.length > 0 && (
+        <div className="px-3 py-0.5 bg-amber-950/40 border-b border-amber-900/30 flex items-center gap-1 shrink-0">
+          <span className="text-[9px] text-amber-500 shrink-0">⚠</span>
+          <span className="text-[8px] text-amber-600 truncate">{failedSources.join(", ")}</span>
+        </div>
+      )}
 
       {/* Feed Items — auto-scrolling container */}
       <div ref={outerRef} className="flex-1 overflow-hidden relative">

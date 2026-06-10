@@ -156,45 +156,39 @@ export function GermanyMap({ feedItems }: { feedItems: FeedItem[] }) {
   );
 
   return (
-    <div className="flex gap-2 h-full overflow-hidden">
+    <div className="relative h-full w-full">
       {error ? (
-        <div className="flex-1 flex items-center justify-center text-slate-700 text-xs">Kartendaten nicht verfügbar</div>
+        <div className="flex items-center justify-center h-full text-slate-700 text-xs">Kartendaten nicht verfügbar</div>
       ) : !geo ? (
-        <div className="flex-1 flex items-center justify-center text-slate-700 text-xs animate-pulse">Karte lädt…</div>
+        <div className="flex items-center justify-center h-full text-slate-700 text-xs animate-pulse">Karte lädt…</div>
       ) : (
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="h-full w-auto shrink-0" />
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet" />
       )}
 
-      {/* Sidebar */}
-      <div className="flex flex-col justify-between text-[8px] shrink-0 py-1 min-w-0">
-        <div>
-          <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-2">🗺 KRITIS-Lage</p>
-          <div className="flex flex-col gap-1">
-            {[
-              { l: "Kritisch", c: "#b91c1c" },
-              { l: "Hoch",     c: "#c2410c" },
-              { l: "Erhöht",   c: "#b45309" },
-              { l: "Mittel",   c: "#1d4ed8" },
-              { l: "Niedrig",  c: "#0f2d5c" },
-            ].map((e) => (
-              <div key={e.l} className="flex items-center gap-1.5">
-                <span className="w-3 h-2 rounded-sm shrink-0" style={{ background: e.c }} />
-                <span className="text-slate-500">{e.l}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-slate-600 mb-1.5">Top Bedrohung:</p>
+      {/* Overlay: title top-left, top-3 + legend bottom-left */}
+      <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-1.5">
+        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider drop-shadow">🗺 KRITIS-Lage</p>
+
+        <div className="flex flex-col gap-1">
+          {/* Top-3 threats */}
           {top3.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1 mb-1">
-              <span className="text-slate-600 w-3">{i + 1}.</span>
-              <span className="font-mono text-slate-300 w-8 truncate">{s.abbr}</span>
-              <div className="w-14 h-1.5 bg-slate-900 rounded overflow-hidden">
+            <div key={s.name} className="flex items-center gap-1">
+              <span className="text-slate-500 text-[8px] w-3 shrink-0">{i + 1}.</span>
+              <span className="font-mono text-[9px] text-slate-300 w-6 shrink-0">{s.abbr}</span>
+              <div className="w-12 h-1.5 bg-slate-900/80 rounded overflow-hidden">
                 <div className="h-full rounded" style={{ width: `${s.score * 100}%`, background: colorScale(s.score) }} />
               </div>
             </div>
           ))}
+          {/* Compact colour legend */}
+          <div className="flex items-center gap-1 mt-0.5">
+            {[
+              { c: "#0f2d5c" }, { c: "#1d4ed8" }, { c: "#b45309" }, { c: "#c2410c" }, { c: "#b91c1c" },
+            ].map((e, i) => (
+              <span key={i} className="w-4 h-1.5 rounded-sm" style={{ background: e.c }} />
+            ))}
+            <span className="text-[7px] text-slate-600 ml-0.5">niedrig → kritisch</span>
+          </div>
         </div>
       </div>
     </div>

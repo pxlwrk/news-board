@@ -40,7 +40,7 @@ export function NewsCard({ item, index }: NewsCardProps) {
         ${isNew ? "" : "opacity-30"}`}
     >
       {/* Headline — maximaler Kontrast */}
-      <p className={`text-[13px] font-semibold leading-snug line-clamp-2 ${isNew ? "text-white" : "text-slate-400"}`}>
+      <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-white">
         {item.title}
       </p>
 

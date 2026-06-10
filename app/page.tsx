@@ -1,6 +1,6 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { FeedCategory, FeedItem, CATEGORY_CONFIG } from "@/lib/feeds";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FeedCategory, FeedItem, CATEGORY_CONFIG, FEED_SOURCES } from "@/lib/feeds";
 import { SocialPost } from "@/lib/social";
 import { FeedColumn } from "@/components/FeedColumn";
 import { SocialColumn } from "@/components/SocialColumn";
@@ -119,6 +119,17 @@ export default function Dashboard() {
     ...(feedData?.categories?.security_news?.items ?? []),
   ];
 
+  const failedByCategory = useMemo<Record<string, string[]>>(() => {
+    const failed = new Set(feedData?.errors ?? []);
+    const map: Record<string, string[]> = {};
+    for (const src of FEED_SOURCES) {
+      if (failed.has(src.name)) {
+        (map[src.category] ??= []).push(src.name);
+      }
+    }
+    return map;
+  }, [feedData?.errors]);
+
   const kev  = extKpis?.cisaKev;
   const nvd  = extKpis?.nvd;
   const fkpi = feedData?.kpis;
@@ -150,19 +161,19 @@ export default function Dashboard() {
   // Right: feed groups (3 columns each, rotating every 35s)
   const feedGroups = [
     <div key="fg1" className="grid grid-cols-3 gap-2 h-full">
-      <FeedColumn category="security_critical" items={feedData?.categories?.security_critical?.items ?? []} loading={feedLoading} />
-      <FeedColumn category="security_news"     items={feedData?.categories?.security_news?.items ?? []}     loading={feedLoading} />
-      <FeedColumn category="government_it"     items={feedData?.categories?.government_it?.items ?? []}     loading={feedLoading} />
+      <FeedColumn category="security_critical" items={feedData?.categories?.security_critical?.items ?? []} loading={feedLoading} failedSources={failedByCategory["security_critical"]} />
+      <FeedColumn category="security_news"     items={feedData?.categories?.security_news?.items ?? []}     loading={feedLoading} failedSources={failedByCategory["security_news"]} />
+      <FeedColumn category="government_it"     items={feedData?.categories?.government_it?.items ?? []}     loading={feedLoading} failedSources={failedByCategory["government_it"]} />
     </div>,
     <div key="fg2" className="grid grid-cols-3 gap-2 h-full">
-      <FeedColumn category="eu_policy"     items={feedData?.categories?.eu_policy?.items ?? []}     loading={feedLoading} />
-      <FeedColumn category="tech_trends"   items={feedData?.categories?.tech_trends?.items ?? []}   loading={feedLoading} />
-      <FeedColumn category="ai_innovation" items={feedData?.categories?.ai_innovation?.items ?? []} loading={feedLoading} />
+      <FeedColumn category="eu_policy"     items={feedData?.categories?.eu_policy?.items ?? []}     loading={feedLoading} failedSources={failedByCategory["eu_policy"]} />
+      <FeedColumn category="tech_trends"   items={feedData?.categories?.tech_trends?.items ?? []}   loading={feedLoading} failedSources={failedByCategory["tech_trends"]} />
+      <FeedColumn category="ai_innovation" items={feedData?.categories?.ai_innovation?.items ?? []} loading={feedLoading} failedSources={failedByCategory["ai_innovation"]} />
     </div>,
     <div key="fg3" className="grid grid-cols-3 gap-2 h-full">
-      <FeedColumn category="security_critical" items={feedData?.categories?.security_critical?.items ?? []} loading={feedLoading} />
+      <FeedColumn category="security_critical" items={feedData?.categories?.security_critical?.items ?? []} loading={feedLoading} failedSources={failedByCategory["security_critical"]} />
       <SocialColumn posts={socialData?.posts ?? []} loading={socialLoading} usingDemoData={socialData?.usingDemoData} />
-      <FeedColumn category="eu_policy" items={feedData?.categories?.eu_policy?.items ?? []} loading={feedLoading} />
+      <FeedColumn category="eu_policy" items={feedData?.categories?.eu_policy?.items ?? []} loading={feedLoading} failedSources={failedByCategory["eu_policy"]} />
     </div>,
   ];
 
@@ -229,8 +240,8 @@ export default function Dashboard() {
         <div className="flex flex-col gap-2 overflow-hidden">
 
           {/* Maps row */}
-          <div className="flex gap-2 shrink-0" style={{ height: "220px" }}>
-            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden" style={{ width: "215px" }}>
+          <div className="flex gap-2 shrink-0" style={{ height: "260px" }}>
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 overflow-hidden" style={{ width: "260px" }}>
               <GermanyMap feedItems={allFeedItems} />
             </div>
             <div className="flex-1 rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
