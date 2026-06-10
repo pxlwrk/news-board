@@ -36,20 +36,22 @@ export function NewsCard({ item, index }: NewsCardProps) {
       className={`flex flex-col px-2.5 py-2 border-l-2 cursor-pointer transition-colors
         ${index % 2 === 0 ? "bg-slate-900/20" : "bg-transparent"}
         hover:bg-slate-800/50
-        ${borderClass}
-        ${isNew ? "" : "opacity-40"}`}
+        ${isNew ? borderClass : "border-l-transparent"}
+        ${isNew ? "" : "opacity-30"}`}
     >
-      {/* Headline — groß und hochkontrastig */}
-      <p className={`text-[12px] font-semibold leading-snug line-clamp-2 ${isNew ? "text-slate-50" : "text-slate-300"}`}>
+      {/* Headline — maximaler Kontrast */}
+      <p className={`text-[13px] font-semibold leading-snug line-clamp-2 ${isNew ? "text-white" : "text-slate-400"}`}>
         {item.title}
       </p>
 
-      {/* Meta-Zeile subtle darunter */}
-      <div className="flex items-center gap-1.5 mt-1 min-w-0">
+      {/* Meta-Zeile: bullet + Quelle + Zeit */}
+      <div className="flex items-center gap-1 mt-1 min-w-0">
         {isNew && (
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 animate-pulse ${config.color.replace("text-", "bg-")}`} />
+          <span className={`shrink-0 text-[8px] leading-none ${config.color}`}>●</span>
         )}
-        <span className={`text-[9px] font-semibold truncate opacity-70 ${config.color}`}>{item.source}</span>
+        <span className={`text-[9px] font-medium truncate ${isNew ? config.color : "text-slate-600"} opacity-80`}>
+          {item.source}
+        </span>
         {item.language === "en" && <span className="text-[8px] text-slate-700 shrink-0">EN</span>}
         <span className="text-[9px] text-slate-600 shrink-0 ml-auto">{shortTime}</span>
       </div>

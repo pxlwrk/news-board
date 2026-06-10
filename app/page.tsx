@@ -207,11 +207,17 @@ export default function Dashboard() {
             highlight={(fkpi?.criticalAdvisories ?? 0) > 0}
           />
           <KPICard compact
-            label="Angriffe / Stunde"
-            value={kpiLoading ? "—" : extKpis?.sicherheitstacho?.attacksLastHour?.toLocaleString("de") ?? "n/v"}
-            sublabel={extKpis?.sicherheitstacho ? `Top: ${extKpis.sicherheitstacho.topSourceCountry} · Port ${extKpis.sicherheitstacho.topPort}` : "DT Sicherheitstacho"}
-            color="orange"
-            highlight={(extKpis?.sicherheitstacho?.attacksLastHour ?? 0) > 50000}
+            label="ISC Infocon"
+            value={kpiLoading ? "—" : (() => {
+              const l = extKpis?.iscSans?.infocon;
+              return l === "green" ? "NORMAL" : l === "yellow" ? "ERHÖHT" : l === "orange" ? "HOCH" : l === "red" ? "KRITISCH" : "n/v";
+            })()}
+            sublabel="SANS Internet Storm Center"
+            color={(() => {
+              const l = extKpis?.iscSans?.infocon;
+              return l === "red" ? "red" : l === "orange" ? "orange" : l === "yellow" ? "amber" : "emerald";
+            })()}
+            highlight={["orange", "red"].includes(extKpis?.iscSans?.infocon ?? "")}
           />
         </div>
       </div>

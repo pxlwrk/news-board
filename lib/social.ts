@@ -20,16 +20,19 @@ export interface SocialSource {
   name: string;
   url: string;
   instance?: string;
+  /** Skip include-filter — use for curated security instances where all posts are relevant */
+  allowAll?: boolean;
 }
 
 export const SOCIAL_SOURCES: SocialSource[] = [
-  // Mastodon – infosec.exchange hashtag timelines
+  // infosec.exchange is a curated security instance — all posts are relevant, skip include filter
   {
     id: "mastodon-infosec",
     platform: "mastodon",
     name: "infosec.exchange #infosec",
     url: "https://infosec.exchange/api/v1/timelines/tag/infosec?limit=40",
     instance: "infosec.exchange",
+    allowAll: true,
   },
   {
     id: "mastodon-cybersecurity",
@@ -37,34 +40,59 @@ export const SOCIAL_SOURCES: SocialSource[] = [
     name: "infosec.exchange #cybersecurity",
     url: "https://infosec.exchange/api/v1/timelines/tag/cybersecurity?limit=30",
     instance: "infosec.exchange",
+    allowAll: true,
   },
   {
-    id: "mastodon-nis2",
+    id: "mastodon-cve",
     platform: "mastodon",
-    name: "infosec.exchange #nis2",
-    url: "https://infosec.exchange/api/v1/timelines/tag/nis2?limit=20",
+    name: "infosec.exchange #cve",
+    url: "https://infosec.exchange/api/v1/timelines/tag/cve?limit=30",
     instance: "infosec.exchange",
+    allowAll: true,
   },
-  // Mastodon – German Government instance
   {
-    id: "mastodon-bund",
+    id: "mastodon-ransomware",
     platform: "mastodon",
-    name: "social.bund.de",
-    url: "https://social.bund.de/api/v1/timelines/public?local=true&limit=40",
+    name: "infosec.exchange #ransomware",
+    url: "https://infosec.exchange/api/v1/timelines/tag/ransomware?limit=20",
+    instance: "infosec.exchange",
+    allowAll: true,
+  },
+  // social.bund.de — Hashtag-Timelines statt public timeline (benötigt keine Auth)
+  {
+    id: "mastodon-bund-cyber",
+    platform: "mastodon",
+    name: "social.bund.de #cybersicherheit",
+    url: "https://social.bund.de/api/v1/timelines/tag/cybersicherheit?limit=30",
     instance: "social.bund.de",
   },
-  // Bluesky public search
+  {
+    id: "mastodon-bund-digital",
+    platform: "mastodon",
+    name: "social.bund.de #digitalisierung",
+    url: "https://social.bund.de/api/v1/timelines/tag/digitalisierung?limit=30",
+    instance: "social.bund.de",
+  },
+  // Bluesky
   {
     id: "bluesky-infosec",
     platform: "bluesky",
     name: "Bluesky #infosec",
     url: "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=%23infosec+%23cybersecurity&limit=30",
+    allowAll: true,
+  },
+  {
+    id: "bluesky-cve",
+    platform: "bluesky",
+    name: "Bluesky #cve",
+    url: "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=%23cve+OR+%23vulnerability&limit=25",
+    allowAll: true,
   },
   {
     id: "bluesky-nis2",
     platform: "bluesky",
     name: "Bluesky #nis2",
-    url: "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=%23nis2+OR+%23dsgvo+OR+%23verwaltungsdigitalisierung&limit=20",
+    url: "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=%23nis2+OR+%23dsgvo&limit=20",
   },
 ];
 

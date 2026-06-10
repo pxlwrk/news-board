@@ -43,7 +43,7 @@ async function fetchMastodon(source: typeof SOCIAL_SOURCES[0]): Promise<SocialPo
       tags: (s.tags ?? []).map((t) => t.name),
       instance: source.instance,
     }))
-    .filter((p) => isRelevant(p.content));
+    .filter((p) => source.allowAll ? !SOCIAL_EXCLUDE.some(r => r.test(p.content)) : isRelevant(p.content));
 }
 
 async function fetchBluesky(source: typeof SOCIAL_SOURCES[0]): Promise<SocialPost[]> {
@@ -73,7 +73,7 @@ async function fetchBluesky(source: typeof SOCIAL_SOURCES[0]): Promise<SocialPos
         tags: post.record.tags ?? [],
       };
     })
-    .filter((p) => isRelevant(p.content));
+    .filter((p) => source.allowAll ? !SOCIAL_EXCLUDE.some(r => r.test(p.content)) : isRelevant(p.content));
 }
 
 export async function GET() {
