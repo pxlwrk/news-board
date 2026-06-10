@@ -56,7 +56,8 @@ async function fetchGitHub(): Promise<{ recent: GHAdvisory[]; criticalCount: num
     "Accept": "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
   };
-  if (process.env.GITHUB_TOKEN) headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const ghToken = process.env.GITHUB_TOKEN ?? process.env.GITHUB_APIKEY;
+  if (ghToken) headers["Authorization"] = `Bearer ${ghToken}`;
 
   const res = await fetch(
     "https://api.github.com/advisories?type=reviewed&per_page=25&direction=desc",

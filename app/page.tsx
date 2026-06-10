@@ -222,7 +222,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-[3fr_2fr] gap-3 px-4 pb-2 overflow-hidden min-h-0">
 
         {/* ── Left: maps + chart panels ──────────────────────────── */}
-        <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
+        <div className="flex flex-col gap-2 overflow-hidden">
 
           {/* Maps row */}
           <div className="flex gap-2 shrink-0" style={{ height: "220px" }}>
@@ -238,15 +238,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Chart panels (3 columns) */}
-          <div className="flex-1 min-h-0 grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
+          {/* Chart panels (3 columns, fixed height) */}
+          <div className="grid grid-cols-3 gap-2 shrink-0" style={{ height: "260px" }}>
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
               <RotatingPanel panels={chartCol1} intervalMs={20000} />
             </div>
-            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
               <RotatingPanel panels={chartCol2} intervalMs={18000} />
             </div>
-            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
+            <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
               <RotatingPanel panels={chartCol3} intervalMs={13000} />
             </div>
           </div>
