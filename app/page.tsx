@@ -8,6 +8,11 @@ import { StatusBar } from "@/components/StatusBar";
 import { KPICard } from "@/components/KPICard";
 import { ThreatGauge } from "@/components/ThreatGauge";
 import { ActivityChart } from "@/components/ActivityChart";
+import { GermanyTileMap } from "@/components/GermanyTileMap";
+import { AttackVectorChart } from "@/components/AttackVectorChart";
+import { SectorTargetChart } from "@/components/SectorTargetChart";
+import { CVESeverityDonut } from "@/components/CVESeverityDonut";
+import { KEVTimeline } from "@/components/KEVTimeline";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -69,26 +74,20 @@ export default function Dashboard() {
 
   const fetchFeeds = useCallback(async () => {
     setFeedLoading(true);
-    try {
-      const r = await fetch("/api/feeds", { cache: "no-store" });
-      if (r.ok) setFeedData(await r.json());
-    } finally { setFeedLoading(false); }
+    try { const r = await fetch("/api/feeds", { cache: "no-store" }); if (r.ok) setFeedData(await r.json()); }
+    finally { setFeedLoading(false); }
   }, []);
 
   const fetchKpis = useCallback(async () => {
     setKpiLoading(true);
-    try {
-      const r = await fetch("/api/kpis", { cache: "no-store" });
-      if (r.ok) setExtKpis(await r.json());
-    } finally { setKpiLoading(false); }
+    try { const r = await fetch("/api/kpis", { cache: "no-store" }); if (r.ok) setExtKpis(await r.json()); }
+    finally { setKpiLoading(false); }
   }, []);
 
   const fetchSocial = useCallback(async () => {
     setSocialLoading(true);
-    try {
-      const r = await fetch("/api/social", { cache: "no-store" });
-      if (r.ok) setSocialData(await r.json());
-    } finally { setSocialLoading(false); }
+    try { const r = await fetch("/api/social", { cache: "no-store" }); if (r.ok) setSocialData(await r.json()); }
+    finally { setSocialLoading(false); }
   }, []);
 
   const refreshAll = useCallback(() => {
@@ -100,12 +99,11 @@ export default function Dashboard() {
     feedTimer.current   = setInterval(fetchFeeds,  FEED_REFRESH_MS);
     kpiTimer.current    = setInterval(fetchKpis,   KPI_REFRESH_MS);
     socialTimer.current = setInterval(fetchSocial, SOCIAL_REFRESH_MS);
-    return () => {
-      [feedTimer, kpiTimer, socialTimer].forEach((t) => { if (t.current) clearInterval(t.current); });
-    };
+    return () => [feedTimer, kpiTimer, socialTimer].forEach((t) => { if (t.current) clearInterval(t.current); });
   }, [refreshAll, fetchFeeds, fetchKpis, fetchSocial]);
 
-  const anyLoading = feedLoading || kpiLoading || socialLoading;
+  // Derive all feed items for visual analysis
+  const allFeedItems: FeedItem[] = Object.values(feedData?.categories ?? {}).flatMap((c) => c.items);
   const secItems: FeedItem[] = [
     ...(feedData?.categories?.security_critical?.items ?? []),
     ...(feedData?.categories?.security_news?.items ?? []),
@@ -114,6 +112,7 @@ export default function Dashboard() {
   const kev  = extKpis?.cisaKev;
   const nvd  = extKpis?.nvd;
   const fkpi = feedData?.kpis;
+  const anyLoading = feedLoading || kpiLoading || socialLoading;
 
   return (
     <div className="flex flex-col h-screen bg-[#06060e] overflow-hidden">
@@ -128,11 +127,9 @@ export default function Dashboard() {
       />
 
       {/* ── KPI row ────────────────────────────────────────────────── */}
-      <div className="flex gap-3 px-4 pt-3 pb-2 shrink-0">
+      <div className="flex gap-3 px-4 pt-2 pb-2 shrink-0">
         <ThreatGauge securityItems={secItems} />
-
         <div className="grid grid-cols-6 gap-3 flex-1">
-          {/* External live KPIs */}
           <KPICard
             label="KEV aktiv ausgenutzt"
             value={kpiLoading ? "—" : kev ? kev.total.toLocaleString("de") : "n/v"}
@@ -147,7 +144,6 @@ export default function Dashboard() {
             color="orange"
             highlight={(nvd?.criticalToday ?? 0) > 5}
           />
-          {/* Feed-derived KPIs */}
           <KPICard
             label="Krit. Warnungen (24h)"
             value={feedLoading ? "—" : fkpi?.criticalAdvisories ?? "—"}
@@ -167,16 +163,52 @@ export default function Dashboard() {
             sublabel={feedData?.usingDemoData ? "Demo-Modus" : `${fkpi?.sourcesOk ?? 0}/${fkpi?.sourcesTotal ?? 0} Quellen`}
             color="slate"
           />
-
           <ActivityChart categories={feedData?.categories ?? {}} />
+        </div>
+      </div>
+
+      {/* ── Visual analysis section ─────────────────────────────────── */}
+      <div className="grid grid-cols-[auto_1fr_1fr] gap-3 px-4 pb-2 shrink-0" style={{ height: "230px" }}>
+
+        {/* Germany Tile Map */}
+        <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden" style={{ width: "340px" }}>
+          <GermanyTileMap feedItems={allFeedItems} />
+        </div>
+
+        {/* Center: Attack vectors + CVE donut */}
+        <div className="grid grid-rows-2 gap-2">
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+            <AttackVectorChart feedItems={allFeedItems} />
+          </div>
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+            <CVESeverityDonut
+              critical={nvd?.criticalToday ?? 0}
+              high={nvd?.highToday ?? 0}
+              loading={kpiLoading}
+            />
+          </div>
+        </div>
+
+        {/* Right: KRITIS sectors + KEV timeline */}
+        <div className="grid grid-rows-2 gap-2">
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+            <SectorTargetChart feedItems={allFeedItems} />
+          </div>
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+            <KEVTimeline
+              total={kev?.total ?? 0}
+              newThisWeek={kev?.newThisWeek ?? 0}
+              loading={kpiLoading}
+            />
+          </div>
         </div>
       </div>
 
       {/* ── Divider ────────────────────────────────────────────────── */}
       <div className="mx-4 border-t border-slate-800/60 shrink-0" />
 
-      {/* ── Main grid: 6 news + 1 social ───────────────────────────── */}
-      <div className="flex-1 min-h-0 grid grid-cols-7 gap-3 p-4 pt-3">
+      {/* ── Feed columns (7: 6 news + social) ──────────────────────── */}
+      <div className="flex-1 min-h-0 grid grid-cols-7 gap-3 p-4 pt-2">
         {NEWS_COLUMNS.map((category) => (
           <FeedColumn
             key={category}
@@ -193,14 +225,14 @@ export default function Dashboard() {
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
-      <div className="px-4 py-1.5 border-t border-slate-800/40 bg-slate-950/60 flex items-center justify-between shrink-0">
+      <div className="px-4 py-1 border-t border-slate-800/40 bg-slate-950/60 flex items-center justify-between shrink-0">
         <span className="text-[10px] text-slate-700">
           News: BSI WID · CERT-Bund · CERT-EU · CVEFeed · Heise · BleepingComputer · Krebs · Golem · Netzpolitik · Bundesregierung · EUR-Lex · Rat der EU · MIT TR · t3n &nbsp;|&nbsp;
-          KPIs: CISA KEV · NIST NVD · abuse.ch URLhaus &nbsp;|&nbsp;
+          KPIs: CISA KEV · NIST NVD &nbsp;|&nbsp;
           Social: Mastodon infosec.exchange · social.bund.de · Bluesky
         </span>
         <span className="text-[10px] text-slate-700">
-          News 5min · KPIs 15min · Social 3min · INTERN
+          News 5min · KPIs 15min · Social 3min · Karte: KRITIS-Dichte + Medienanalyse · INTERN
         </span>
       </div>
     </div>
