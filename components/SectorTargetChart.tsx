@@ -1,56 +1,43 @@
 "use client";
 import { useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, Cell, LabelList, ResponsiveContainer } from "recharts";
 import { FeedItem } from "@/lib/feeds";
 
 const SECTORS = [
-  { key: "verwaltung",  label: "Öffentl. Verwaltung", kw: /verwaltung|behörde|ministerium|bundesbehörde|kommune|amt\b/i,             color: "#60a5fa" },
-  { key: "energie",     label: "Energie / KRITIS",    kw: /\benergie\b|energieversorger|strom.*netz|gasversorgung|kraftwerk|enbw|rwe/i, color: "#f59e0b" },
-  { key: "gesundheit",  label: "Gesundheit",          kw: /krankenhaus|klinik|gesundheit|medizin|impfstoff|patientendaten/i,          color: "#34d399" },
-  { key: "finanzen",    label: "Finanzen / Banking",  kw: /\bbank\b|finanz|börse|zahlungsverkehr|swift|fintech/i,                    color: "#a78bfa" },
-  { key: "it_infra",    label: "IT-Infrastruktur",    kw: /rechenzentrum|cloud.*infrastruktur|telekommunikation|backbone|internet.*knoten/i, color: "#f472b6" },
-  { key: "verkehr",     label: "Verkehr / Transport", kw: /\bverkehr\b|bahn\b|flughafen|logistik|hafen\b|autobahn/i,                color: "#fb923c" },
-  { key: "verteidigung",label: "Verteidigung / Mil.", kw: /\bbundeswehr\b|verteidigung|nato|militär|rüstung/i,                       color: "#e11d48" },
-  { key: "forschung",   label: "Forschung / Uni",     kw: /universität|hochschule|forschung|dfn|wissenschaft/i,                     color: "#22d3ee" },
+  { label: "Öffentl. Verwaltung", kw: /verwaltung|behörde|ministerium|bundesbehörde|kommune/i,        color: "#60a5fa" },
+  { label: "Energie / KRITIS",    kw: /\benergie\b|energieversorger|strom.*netz|kraftwerk|enbw|rwe/i, color: "#f59e0b" },
+  { label: "Gesundheit",          kw: /krankenhaus|klinik|gesundheit|medizin|patientendaten/i,        color: "#34d399" },
+  { label: "Finanzen / Banking",  kw: /\bbank\b|finanz|börse|zahlungsverkehr|swift/i,                color: "#a78bfa" },
+  { label: "IT-Infrastruktur",    kw: /rechenzentrum|cloud.*infra|telekommunikation|backbone/i,      color: "#f472b6" },
+  { label: "Verkehr / Transport", kw: /\bverkehr\b|bahn\b|flughafen|logistik|hafen\b/i,             color: "#fb923c" },
+  { label: "Verteidigung / Mil.", kw: /\bbundeswehr\b|verteidigung|nato|militär/i,                  color: "#e11d48" },
+  { label: "Forschung / Uni",     kw: /universität|hochschule|forschung|dfn|wissenschaft/i,         color: "#22d3ee" },
 ] as const;
 
 export function SectorTargetChart({ feedItems }: { feedItems: FeedItem[] }) {
-  const counts = useMemo(() => {
-    return SECTORS.map((s) => ({
-      ...s,
-      count: feedItems.filter((i) => s.kw.test(i.title + " " + i.description)).length,
-    })).sort((a, b) => b.count - a.count);
-  }, [feedItems]);
-
-  const max = Math.max(...counts.map((c) => c.count), 1);
-
+  const data = useMemo(
+    () =>
+      SECTORS.map((s) => ({
+        label: s.label,
+        value: feedItems.filter((i) => s.kw.test(i.title + " " + i.description)).length,
+        color: s.color,
+      })).sort((a, b) => b.value - a.value),
+    [feedItems]
+  );
   return (
     <div className="flex flex-col h-full">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
-        🏭 KRITIS-Sektoren · Betroffenheit
-      </div>
-      <div className="flex flex-col gap-1.5 flex-1">
-        {counts.map((s) => (
-          <div key={s.key} className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-400 w-32 shrink-0 truncate">{s.label}</span>
-            <div className="flex-1 h-3.5 bg-slate-900 rounded-sm overflow-hidden">
-              <div
-                className="h-full rounded-sm transition-all duration-700"
-                style={{
-                  width: `${(s.count / max) * 100}%`,
-                  background: `linear-gradient(90deg, ${s.color}cc, ${s.color}55)`,
-                  minWidth: s.count > 0 ? "4px" : "0",
-                  boxShadow: s.count > 0 ? `0 0 6px ${s.color}40` : "none",
-                }}
-              />
-            </div>
-            <span
-              className="text-[10px] tabular-nums w-5 text-right shrink-0 font-mono"
-              style={{ color: s.count > 0 ? s.color : "#475569" }}
-            >
-              {s.count}
-            </span>
-          </div>
-        ))}
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1 shrink-0">🏭 KRITIS-Sektoren · Betroffenheit</p>
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ top: 2, right: 26, left: 4, bottom: 2 }}>
+            <XAxis type="number" hide domain={[0, "auto"]} />
+            <YAxis type="category" dataKey="label" width={114} tick={{ fill: "#64748b", fontSize: 9, fontFamily: "sans-serif" }} axisLine={false} tickLine={false} />
+            <Bar dataKey="value" radius={[0, 3, 3, 0]} maxBarSize={10} isAnimationActive={false}>
+              {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={d.value > 0 ? 0.85 : 0.18} />)}
+              <LabelList dataKey="value" position="right" style={{ fill: "#475569", fontSize: 8.5, fontFamily: "monospace" }} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

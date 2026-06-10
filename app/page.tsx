@@ -166,7 +166,10 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-[#06060e] overflow-hidden">
+    <div
+      className="bg-[#06060e] overflow-hidden"
+      style={{ display: "grid", height: "100vh", gridTemplateRows: "auto auto 300px 1px 1fr auto" }}
+    >
 
       {/* ── Status bar ─────────────────────────────────────────────── */}
       <StatusBar
@@ -178,7 +181,7 @@ export default function Dashboard() {
       />
 
       {/* ── KPI row ────────────────────────────────────────────────── */}
-      <div className="flex gap-3 px-4 pt-2 pb-2 shrink-0">
+      <div className="flex gap-3 px-4 pt-2 pb-2">
         <ThreatGauge securityItems={secItems} />
         <div className="grid grid-cols-6 gap-3 flex-1">
           <KPICard
@@ -218,40 +221,40 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Visual analysis section ─────────────────────────────────── */}
-      <div className="grid grid-cols-[auto_1fr_1fr] gap-3 px-4 pb-2 shrink-0" style={{ height: "260px" }}>
+      {/* ── Visual analysis section (300px grid row) ───────────────── */}
+      <div className="grid grid-cols-[290px_1fr_1fr] gap-3 px-4 pb-2 overflow-hidden">
 
         {/* Germany SVG map */}
-        <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden" style={{ width: "290px" }}>
+        <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2.5 overflow-hidden min-h-0">
           <GermanyMap feedItems={allFeedItems} />
         </div>
 
         {/* Center: Attack vectors → World attack map → GitHub Advisory | CVE donut → Threat radar */}
-        <div className="grid grid-rows-2 gap-2">
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+        <div className="grid grid-rows-2 gap-2 min-h-0">
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
             <RotatingPanel panels={centerPanels} intervalMs={13000} />
           </div>
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
             <RotatingPanel panels={centerBottomPanels} intervalMs={15000} />
           </div>
         </div>
 
         {/* Right: KRITIS sectors → MSRC | KEV → Network topology → Honeypot → Cloudflare */}
-        <div className="grid grid-rows-2 gap-2">
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+        <div className="grid grid-rows-2 gap-2 min-h-0">
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
             <RotatingPanel panels={rightPanels} intervalMs={17000} />
           </div>
-          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
+          <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden min-h-0">
             <RotatingPanel panels={bottomRightPanels} intervalMs={11000} />
           </div>
         </div>
       </div>
 
       {/* ── Divider ────────────────────────────────────────────────── */}
-      <div className="mx-4 border-t border-slate-800/60 shrink-0" />
+      <div className="mx-4 border-t border-slate-800/60" />
 
       {/* ── Feed columns (7: 6 news + social) ──────────────────────── */}
-      <div className="flex-1 min-h-0 grid grid-cols-7 gap-3 p-4 pt-2">
+      <div className="grid grid-cols-7 gap-3 p-4 pt-2 overflow-hidden min-h-0">
         {NEWS_COLUMNS.map((category) => (
           <FeedColumn
             key={category}
@@ -268,7 +271,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
-      <div className="px-4 py-1 border-t border-slate-800/40 bg-slate-950/60 flex items-center justify-between shrink-0">
+      <div className="px-4 py-1 border-t border-slate-800/40 bg-slate-950/60 flex items-center justify-between">
         <span className="text-[10px] text-slate-700">
           News: BSI WID · CERT-Bund · CERT-EU · CVEFeed · Heise · BleepingComputer · Krebs · Golem · Netzpolitik · Bundesregierung · EUR-Lex · Rat der EU · MIT TR · t3n &nbsp;|&nbsp;
           KPIs: CISA KEV · NIST NVD · GitHub Advisory · MSRC · Cloudflare Radar · DT Sicherheitstacho &nbsp;|&nbsp;

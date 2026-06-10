@@ -1,129 +1,197 @@
 "use client";
-import { useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import * as d3 from "d3";
 import { FeedItem } from "@/lib/feeds";
 
-const STATES = [
-  { id: "SH",  label: "SH",  name: "Schleswig-Holstein",  kw: /schleswig|holstein|kiel|flensburg/i,                           base: 0.35, cx: 178, cy: 38,  path: "M 130 8 L 212 5 L 226 28 L 245 52 L 208 68 L 182 75 L 160 70 L 130 52 Z" },
-  { id: "HH",  label: "HH",  name: "Hamburg",             kw: /hamburg\b|hansestadt/i,                                        base: 0.55, cx: 187, cy: 76,  path: "M 179 70 L 194 70 L 194 82 L 179 82 Z" },
-  { id: "MV",  label: "MV",  name: "Mecklenburg-Vorp.",   kw: /mecklenburg|vorpommern|rostock|schwerin/i,                     base: 0.30, cx: 258, cy: 30,  path: "M 130 8 L 130 52 L 160 70 L 182 75 L 208 68 L 245 52 L 265 62 L 375 58 L 375 8 Z" },
-  { id: "NI",  label: "NI",  name: "Niedersachsen",       kw: /niedersachsen|hannover|braunschweig|osnabrück/i,               base: 0.45, cx: 138, cy: 128, path: "M 28 75 L 130 52 L 160 70 L 179 70 L 194 82 L 245 75 L 246 182 L 168 188 L 95 175 L 45 155 Z" },
-  { id: "HB",  label: "HB",  name: "Bremen",              kw: /\bbremen\b/i,                                                  base: 0.50, cx: 120, cy: 127, path: "M 113 120 L 128 120 L 128 134 L 113 134 Z" },
-  { id: "BB",  label: "BB",  name: "Brandenburg",         kw: /\bbrandenburg\b|potsdam/i,                                     base: 0.40, cx: 305, cy: 145, path: "M 246 75 L 375 72 L 375 218 L 290 222 L 250 208 L 246 182 Z" },
-  { id: "BE",  label: "BE",  name: "Berlin",              kw: /\bberlin\b|bvg\b|senat\b/i,                                   base: 0.75, cx: 279, cy: 152, path: "M 270 142 L 288 142 L 288 162 L 270 162 Z" },
-  { id: "NRW", label: "NRW", name: "Nordrhein-Westfalen", kw: /nordrhein|westfalen|\bnrw\b|köln|düsseldorf|dortmund/i,        base: 0.70, cx: 95,  cy: 212, path: "M 28 155 L 95 175 L 168 188 L 162 258 L 102 268 L 38 248 L 22 200 Z" },
-  { id: "SA",  label: "ST",  name: "Sachsen-Anhalt",      kw: /sachsen.anhalt|magdeburg|halle\b/i,                            base: 0.38, cx: 248, cy: 218, path: "M 246 182 L 250 208 L 290 222 L 292 248 L 245 252 L 212 238 L 202 215 L 207 185 Z" },
-  { id: "HE",  label: "HE",  name: "Hessen",              kw: /\bhessen\b|frankfurt|wiesbaden|darmstadt/i,                    base: 0.60, cx: 183, cy: 282, path: "M 162 258 L 202 252 L 215 265 L 220 298 L 195 312 L 160 308 L 140 280 Z" },
-  { id: "TH",  label: "TH",  name: "Thüringen",           kw: /thüringen|erfurt|jena|weimar/i,                               base: 0.35, cx: 248, cy: 262, path: "M 212 238 L 245 252 L 292 248 L 290 280 L 250 288 L 212 282 L 205 262 Z" },
-  { id: "SN",  label: "SN",  name: "Sachsen",             kw: /\bsachsen\b|dresden|leipzig|chemnitz/i,                       base: 0.45, cx: 330, cy: 262, path: "M 290 222 L 375 218 L 375 305 L 288 308 L 290 280 L 292 248 Z" },
-  { id: "RP",  label: "RP",  name: "Rheinland-Pfalz",     kw: /rheinland|pfalz|mainz|koblenz|trier/i,                        base: 0.42, cx: 72,  cy: 290, path: "M 38 248 L 102 268 L 118 302 L 95 338 L 38 318 L 24 278 Z" },
-  { id: "SAR", label: "SL",  name: "Saarland",            kw: /\bsaarland\b|saarbrücken/i,                                   base: 0.38, cx: 107, cy: 331, path: "M 95 322 L 118 320 L 116 340 L 95 340 Z" },
-  { id: "BW",  label: "BW",  name: "Baden-Württemberg",   kw: /\bbaden\b|württemberg|stuttgart|freiburg|karlsruhe/i,         base: 0.55, cx: 152, cy: 352, path: "M 118 302 L 160 308 L 195 312 L 210 352 L 168 400 L 118 395 L 95 348 L 95 340 L 116 340 Z" },
-  { id: "BY",  label: "BY",  name: "Bayern",              kw: /\bbayern\b|münchen|nürnberg|augsburg|regensburg/i,            base: 0.60, cx: 285, cy: 355, path: "M 212 282 L 250 288 L 290 280 L 288 308 L 375 305 L 372 418 L 270 428 L 168 405 L 168 400 L 210 352 L 210 315 L 200 302 Z" },
-] as const;
+const GEO_URL =
+  "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/4_niedrig.geo.json";
 
-function scoreColor(s: number) {
-  if (s < 0.30) return "#0a1628";
-  if (s < 0.45) return "#1e3a5f";
-  if (s < 0.58) return "#1d4ed8";
-  if (s < 0.70) return "#b45309";
-  if (s < 0.82) return "#c2410c";
-  return "#b91c1c";
-}
+const STATE_META: Record<string, { kw: RegExp; base: number }> = {
+  "Baden-Württemberg":      { kw: /\bbaden\b|württemberg|stuttgart|karlsruhe|freiburg/i,  base: 0.55 },
+  "Bayern":                 { kw: /\bbayern\b|münchen|nürnberg|augsburg/i,                base: 0.60 },
+  "Berlin":                 { kw: /\bberlin\b|bvg\b|berliner senat/i,                    base: 0.75 },
+  "Brandenburg":            { kw: /\bbrandenburg\b|potsdam/i,                             base: 0.40 },
+  "Bremen":                 { kw: /\bbremen\b/i,                                          base: 0.50 },
+  "Hamburg":                { kw: /\bhamburg\b|hansestadt/i,                              base: 0.55 },
+  "Hessen":                 { kw: /\bhessen\b|frankfurt|wiesbaden/i,                      base: 0.60 },
+  "Mecklenburg-Vorpommern": { kw: /mecklenburg|vorpommern|rostock|schwerin/i,             base: 0.30 },
+  "Niedersachsen":          { kw: /niedersachsen|hannover|braunschweig/i,                 base: 0.45 },
+  "Nordrhein-Westfalen":    { kw: /nordrhein|westfalen|\bnrw\b|köln|düsseldorf/i,         base: 0.70 },
+  "Rheinland-Pfalz":        { kw: /rheinland|pfalz|mainz|koblenz/i,                      base: 0.42 },
+  "Saarland":               { kw: /\bsaarland\b|saarbrücken/i,                            base: 0.38 },
+  "Sachsen":                { kw: /\bsachsen\b|dresden|leipzig/i,                         base: 0.45 },
+  "Sachsen-Anhalt":         { kw: /sachsen.anhalt|magdeburg|halle\b/i,                    base: 0.38 },
+  "Schleswig-Holstein":     { kw: /schleswig|holstein|kiel/i,                             base: 0.35 },
+  "Thüringen":              { kw: /thüringen|erfurt|jena/i,                               base: 0.35 },
+};
 
-function strokeColor(s: number) {
-  return s >= 0.70 ? "#f97316" : "#1e293b";
-}
+const colorScale = d3
+  .scaleSequential(d3.interpolateRgbBasis(["#0a1628", "#0f2d5c", "#1d4ed8", "#b45309", "#c2410c", "#b91c1c"]))
+  .domain([0, 1]);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GeoFeature = any;
+
+const W = 220, H = 280;
 
 export function GermanyMap({ feedItems }: { feedItems: FeedItem[] }) {
-  const scored = useMemo(
-    () =>
-      [...STATES]
-        .map((st) => {
-          const hits = feedItems.filter((i) =>
-            st.kw.test(i.title + " " + i.description)
-          ).length;
-          return { ...st, score: Math.min(st.base + hits * 0.065, 1) };
-        })
-        .sort((a, b) => b.score - a.score),
-    [feedItems]
-  );
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [geo, setGeo] = useState<{ features: GeoFeature[] } | null>(null);
+  const [error, setError] = useState(false);
 
-  const top3 = scored.slice(0, 3);
-  const small = new Set(["HH", "HB", "BE", "SAR"]);
+  const scores = useMemo(() => {
+    const r: Record<string, number> = {};
+    for (const [name, meta] of Object.entries(STATE_META)) {
+      const hits = feedItems.filter((i) => meta.kw.test(i.title + " " + i.description)).length;
+      r[name] = Math.min(meta.base + hits * 0.07, 1);
+    }
+    return r;
+  }, [feedItems]);
+
+  useEffect(() => {
+    d3.json(GEO_URL)
+      .then((data) => setGeo(data as { features: GeoFeature[] }))
+      .catch(() => setError(true));
+  }, []);
+
+  useEffect(() => {
+    if (!geo || !svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    svg.selectAll("*").remove();
+
+    const projection = d3
+      .geoMercator()
+      .center([10.45, 51.15])
+      .scale(1540)
+      .translate([W / 2, H / 2]);
+    const path = d3.geoPath().projection(projection);
+
+    const defs = svg.append("defs");
+    defs.append("filter").attr("id", "map-glow")
+      .call((f) => {
+        f.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "blur");
+        f.append("feMerge").call((m) => {
+          m.append("feMergeNode").attr("in", "blur");
+          m.append("feMergeNode").attr("in", "SourceGraphic");
+        });
+      });
+
+    const g = svg.append("g");
+
+    g.selectAll("path")
+      .data(geo.features)
+      .join("path")
+      .attr("d", path)
+      .attr("fill", (d: GeoFeature) => {
+        const score = scores[d.properties.name] ?? 0.3;
+        return colorScale(score);
+      })
+      .attr("stroke", (d: GeoFeature) => {
+        const score = scores[d.properties.name] ?? 0.3;
+        return score >= 0.62 ? "#f97316" : "#1e293b";
+      })
+      .attr("stroke-width", (d: GeoFeature) => {
+        const score = scores[d.properties.name] ?? 0.3;
+        return score >= 0.62 ? 1.2 : 0.6;
+      })
+      .style("filter", (d: GeoFeature) => {
+        const score = scores[d.properties.name] ?? 0.3;
+        return score >= 0.65 ? "url(#map-glow)" : null;
+      });
+
+    // Labels for states (skip tiny city-states)
+    const skip = new Set(["Bremen", "Hamburg", "Berlin"]);
+    g.selectAll("text")
+      .data(geo.features.filter((f: GeoFeature) => !skip.has(f.properties.name)))
+      .join("text")
+      .attr("transform", (d: GeoFeature) => {
+        const c = path.centroid(d);
+        return `translate(${c[0]},${c[1]})`;
+      })
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr("fill", (d: GeoFeature) => {
+        const score = scores[d.properties.name] ?? 0.3;
+        return score >= 0.55 ? "#f1f5f9" : "#94a3b8";
+      })
+      .attr("font-size", "7.5")
+      .attr("font-family", "monospace")
+      .attr("font-weight", "600")
+      .attr("pointer-events", "none")
+      .text((d: GeoFeature) => {
+        const id: string = d.properties.id ?? "";
+        return id.replace("DE-", "");
+      });
+
+    // Pulse circles on high-threat states
+    geo.features
+      .filter((f: GeoFeature) => (scores[f.properties.name] ?? 0) >= 0.65)
+      .forEach((f: GeoFeature) => {
+        const c = path.centroid(f);
+        if (!c[0]) return;
+        const circle = g
+          .append("circle")
+          .attr("cx", c[0])
+          .attr("cy", c[1] - 10)
+          .attr("r", 2.5)
+          .attr("fill", "#ef4444")
+          .attr("opacity", 0.9);
+        const pulse = () =>
+          circle
+            .transition().duration(1000).attr("r", 5.5).attr("opacity", 0.1)
+            .transition().duration(1000).attr("r", 2.5).attr("opacity", 0.9)
+            .on("end", pulse);
+        pulse();
+      });
+  }, [geo, scores]);
+
+  // Sorted top 3 states by threat
+  const top3 = useMemo(
+    () =>
+      Object.entries(scores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name, score]) => ({ name, score, abbr: name.slice(0, 2).toUpperCase() })),
+    [scores]
+  );
 
   return (
     <div className="flex gap-2 h-full overflow-hidden">
-      {/* Map */}
-      <svg viewBox="0 0 380 438" className="h-full w-auto shrink-0" style={{ maxWidth: "200px" }}>
-        <defs>
-          <filter id="st-glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="3" result="b" />
-            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-        {scored.map((st) => (
-          <g key={st.id}>
-            <path
-              d={st.path}
-              fill={scoreColor(st.score)}
-              stroke={strokeColor(st.score)}
-              strokeWidth={st.score >= 0.70 ? 1.5 : 0.7}
-              style={st.score >= 0.70 ? { filter: "url(#st-glow)" } : undefined}
-            />
-            {!small.has(st.id) && (
-              <text
-                x={st.cx} y={st.cy}
-                textAnchor="middle" dominantBaseline="middle"
-                fill={st.score >= 0.55 ? "#f1f5f9" : "#64748b"}
-                fontSize={st.id === "BY" || st.id === "NI" || st.id === "NRW" ? 9 : 7}
-                fontFamily="monospace" fontWeight="700"
-              >
-                {st.label}
-              </text>
-            )}
-            {st.score >= 0.68 && (
-              <circle cx={st.cx} cy={st.cy - 10} r="3" fill="#ef4444">
-                <animate attributeName="r" values="2;5;2" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite" />
-              </circle>
-            )}
-          </g>
-        ))}
-      </svg>
+      {error ? (
+        <div className="flex-1 flex items-center justify-center text-slate-700 text-xs">Kartendaten nicht verfügbar</div>
+      ) : !geo ? (
+        <div className="flex-1 flex items-center justify-center text-slate-700 text-xs animate-pulse">Karte lädt…</div>
+      ) : (
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="h-full w-auto shrink-0" />
+      )}
 
       {/* Sidebar */}
-      <div className="flex flex-col justify-between shrink-0 min-w-0 flex-1">
+      <div className="flex flex-col justify-between text-[8px] shrink-0 py-1 min-w-0">
         <div>
-          <div className="text-[9px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
-            🗺 KRITIS-Lage DE
-          </div>
+          <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-2">🗺 KRITIS-Lage</p>
           <div className="flex flex-col gap-1">
             {[
               { l: "Kritisch", c: "#b91c1c" },
               { l: "Hoch",     c: "#c2410c" },
               { l: "Erhöht",   c: "#b45309" },
               { l: "Mittel",   c: "#1d4ed8" },
-              { l: "Niedrig",  c: "#1e3a5f" },
+              { l: "Niedrig",  c: "#0f2d5c" },
             ].map((e) => (
               <div key={e.l} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2 rounded-sm shrink-0" style={{ background: e.c }} />
-                <span className="text-[8px] text-slate-500">{e.l}</span>
+                <span className="w-3 h-2 rounded-sm shrink-0" style={{ background: e.c }} />
+                <span className="text-slate-500">{e.l}</span>
               </div>
             ))}
           </div>
         </div>
-
         <div>
-          <div className="text-[8px] text-slate-600 mb-1">Top Bedrohung:</div>
-          {top3.map((st, i) => (
-            <div key={st.id} className="flex items-center gap-1 mb-1">
-              <span className="text-[8px] text-slate-600 w-3">{i + 1}.</span>
-              <span className="text-[8px] font-mono text-slate-300 w-6">{st.id}</span>
-              <div className="flex-1 h-1.5 bg-slate-900 rounded overflow-hidden">
-                <div
-                  className="h-full rounded transition-all duration-700"
-                  style={{ width: `${st.score * 100}%`, background: scoreColor(st.score) }}
-                />
+          <p className="text-slate-600 mb-1.5">Top Bedrohung:</p>
+          {top3.map((s, i) => (
+            <div key={s.name} className="flex items-center gap-1 mb-1">
+              <span className="text-slate-600 w-3">{i + 1}.</span>
+              <span className="font-mono text-slate-300 w-8 truncate">{s.abbr}</span>
+              <div className="w-14 h-1.5 bg-slate-900 rounded overflow-hidden">
+                <div className="h-full rounded" style={{ width: `${s.score * 100}%`, background: colorScale(s.score) }} />
               </div>
             </div>
           ))}
