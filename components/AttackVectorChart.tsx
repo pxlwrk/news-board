@@ -27,8 +27,8 @@ export function AttackVectorChart({ feedItems }: { feedItems: FeedItem[] }) {
   return (
     <div className="flex flex-col h-full">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1 shrink-0">⚔ Angriffsvektoren</p>
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="flex-1 min-h-0 min-w-0">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart data={data} layout="vertical" margin={{ top: 2, right: 26, left: 4, bottom: 2 }}>
             <XAxis type="number" hide domain={[0, "auto"]} />
             <YAxis type="category" dataKey="label" width={114} tick={{ fill: "#64748b", fontSize: 9, fontFamily: "sans-serif" }} axisLine={false} tickLine={false} />

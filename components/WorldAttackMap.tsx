@@ -71,8 +71,8 @@ export function WorldAttackMap({ topCountry, attacksPerHour, loading }: Props) {
     svg.append("path")
       .datum({ type: "Sphere" } as d3.GeoPermissibleObjects)
       .attr("d", path)
-      .attr("fill", "#060d1c")
-      .attr("stroke", "#0f2040")
+      .attr("fill", "#040b16")
+      .attr("stroke", "#0e2040")
       .attr("stroke-width", 0.5);
 
     // Graticule
@@ -80,26 +80,26 @@ export function WorldAttackMap({ topCountry, attacksPerHour, loading }: Props) {
       .datum(d3.geoGraticule()())
       .attr("d", path)
       .attr("fill", "none")
-      .attr("stroke", "#0a1a30")
-      .attr("stroke-width", 0.3);
+      .attr("stroke", "#0d1e33")
+      .attr("stroke-width", 0.25);
 
-    // Land
+    // Land — clearly brighter than ocean
     svg.append("path")
       .datum(land as d3.GeoPermissibleObjects)
       .attr("d", path)
-      .attr("fill", "#0d1f38")
-      .attr("stroke", "#1e3a5f")
-      .attr("stroke-width", 0.4);
+      .attr("fill", "#1d3f6a")
+      .attr("stroke", "#2d5a8a")
+      .attr("stroke-width", 0.5);
 
-    // Countries (slightly lighter border)
+    // Countries border
     svg.selectAll(".ctry")
       .data((countries as d3.GeoPermissibleObjects & { features: d3.GeoPermissibleObjects[] }).features)
       .join("path")
       .attr("class", "ctry")
       .attr("d", path)
       .attr("fill", "transparent")
-      .attr("stroke", "#122040")
-      .attr("stroke-width", 0.3);
+      .attr("stroke", "#253d5c")
+      .attr("stroke-width", 0.4);
 
     // Attack arcs
     SOURCES.forEach((src, i) => {
@@ -113,10 +113,10 @@ export function WorldAttackMap({ topCountry, attacksPerHour, loading }: Props) {
         .datum(arcData as d3.GeoPermissibleObjects)
         .attr("d", path)
         .attr("fill", "none")
-        .attr("stroke", isTop ? "#ef4444" : src.active ? "#3b82f6" : "#1e3a5f")
-        .attr("stroke-width", isTop ? 1.8 : src.active ? 0.9 : 0.5)
-        .attr("stroke-dasharray", isTop ? "7 3" : "5 5")
-        .attr("opacity", isTop ? 1 : src.active ? 0.6 : 0.25)
+        .attr("stroke", isTop ? "#ef4444" : src.active ? "#60a5fa" : "#2a4060")
+        .attr("stroke-width", isTop ? 2.2 : src.active ? 1.4 : 0.6)
+        .attr("stroke-dasharray", isTop ? "8 3" : "6 4")
+        .attr("opacity", isTop ? 1 : src.active ? 0.85 : 0.3)
         .attr("class", isTop ? "arc-top" : src.active ? "arc-active" : "")
         .style("stroke-dashoffset", `${i * -8}`)
         .style("filter", isTop ? "url(#wam-glow)" : "none");
@@ -167,11 +167,15 @@ export function WorldAttackMap({ topCountry, attacksPerHour, loading }: Props) {
           <span className="text-[9px] font-mono text-orange-400">{attacksPerHour.toLocaleString("de")} /h</span>
         )}
       </div>
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center"><span className="text-slate-700 text-xs">Lädt…</span></div>
-      ) : (
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full flex-1" preserveAspectRatio="xMidYMid meet" />
-      )}
+      {/* SVG always in DOM — absolute fill so h-full resolves correctly */}
+      <div className="relative flex-1 overflow-hidden">
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet" />
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60">
+            <span className="text-slate-700 text-xs">Lädt…</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

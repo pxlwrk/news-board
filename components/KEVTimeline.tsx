@@ -25,8 +25,8 @@ export function KEVTimeline({ total, newThisWeek, loading }: Props) {
       {loading ? (
         <div className="flex-1 flex items-center justify-center"><span className="text-slate-700 text-xs">Lädt…</span></div>
       ) : (
-        <div className="flex-1 min-h-0">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="flex-1 min-h-0 min-w-0">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={data} margin={{ top: 14, right: 4, left: -22, bottom: 0 }}>
               <XAxis dataKey="label" tick={{ fill: "#475569", fontSize: 7, fontFamily: "monospace" }} axisLine={false} tickLine={false} />
               <YAxis hide />

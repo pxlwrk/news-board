@@ -37,7 +37,7 @@ export function NewsCard({ item, index }: NewsCardProps) {
         ${index % 2 === 0 ? "bg-slate-900/20" : "bg-transparent"}
         hover:bg-slate-800/50
         ${isNew ? borderClass : "border-l-transparent"}
-        ${isNew ? "" : "opacity-30"}`}
+        ${isNew ? "" : "opacity-60"}`}
     >
       {/* Headline — maximaler Kontrast */}
       <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-white">

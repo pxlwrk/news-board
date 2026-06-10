@@ -25,8 +25,8 @@ export function ActivityChart({ categories }: Props) {
   return (
     <div className="flex flex-col h-full rounded-lg border border-slate-800/50 bg-slate-950/40 px-2 py-2">
       <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-600 mb-1 shrink-0">Artikel</p>
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="flex-1 min-h-0 min-w-0">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart data={data} margin={{ top: 2, right: 2, left: -10, bottom: 0 }}>
             <Bar dataKey="value" radius={[2, 2, 0, 0]} maxBarSize={18} isAnimationActive={false}>
               {data.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={0.7} />)}

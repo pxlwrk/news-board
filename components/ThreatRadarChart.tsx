@@ -27,8 +27,8 @@ export function ThreatRadarChart({ feedItems }: { feedItems: FeedItem[] }) {
   return (
     <div className="flex flex-col h-full">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1 shrink-0">🕷 Bedrohungsradar</p>
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="flex-1 min-h-0 min-w-0">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <RadarChart data={data} margin={{ top: 8, right: 24, left: 24, bottom: 8 }}>
             <PolarGrid stroke="#1e293b" strokeWidth={0.8} />
             <PolarAngleAxis

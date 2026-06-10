@@ -3,8 +3,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { FeedItem } from "@/lib/feeds";
 
-const GEO_URL =
-  "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/4_niedrig.geo.json";
+const GEO_URL = "/germany.geo.json";
 
 const STATE_META: Record<string, { kw: RegExp; base: number }> = {
   "Baden-Württemberg":      { kw: /\bbaden\b|württemberg|stuttgart|karlsruhe|freiburg/i,  base: 0.55 },
