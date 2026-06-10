@@ -13,6 +13,12 @@ import { AttackVectorChart } from "@/components/AttackVectorChart";
 import { SectorTargetChart } from "@/components/SectorTargetChart";
 import { CVESeverityDonut } from "@/components/CVESeverityDonut";
 import { KEVTimeline } from "@/components/KEVTimeline";
+import { RotatingPanel } from "@/components/RotatingPanel";
+import { GitHubAdvisoryWidget } from "@/components/GitHubAdvisoryWidget";
+import { MSRCWidget } from "@/components/MSRCWidget";
+import { CloudflareWidget } from "@/components/CloudflareWidget";
+import { HoneypotWidget } from "@/components/HoneypotWidget";
+import type { GHAdvisory, MSRCRelease, CloudflareData, SicherheitstachoData } from "@/app/api/kpis/route";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +43,10 @@ interface FeedData {
 interface ExternalKPIs {
   cisaKev: { total: number; newThisWeek: number; newToday: number; lastAdded: string } | null;
   nvd: { criticalToday: number; highToday: number } | null;
+  github: { recent: GHAdvisory[]; criticalCount: number; highCount: number } | null;
+  msrc: MSRCRelease | null;
+  cloudflare: CloudflareData | null;
+  sicherheitstacho: SicherheitstachoData | null;
   fetchedAt: string;
   errors: string[];
 }
@@ -114,6 +124,36 @@ export default function Dashboard() {
   const fkpi = feedData?.kpis;
   const anyLoading = feedLoading || kpiLoading || socialLoading;
 
+  // Rotating panel content for center column
+  const centerPanels = [
+    <AttackVectorChart key="av" feedItems={allFeedItems} />,
+    <GitHubAdvisoryWidget
+      key="gh"
+      advisories={extKpis?.github?.recent ?? []}
+      criticalCount={extKpis?.github?.criticalCount ?? 0}
+      highCount={extKpis?.github?.highCount ?? 0}
+      loading={kpiLoading}
+    />,
+  ];
+
+  // Rotating panel content for right column
+  const rightPanels = [
+    <SectorTargetChart key="st" feedItems={allFeedItems} />,
+    <MSRCWidget key="msrc" data={extKpis?.msrc ?? null} loading={kpiLoading} />,
+  ];
+
+  // Rotating panel content for KEV/bottom-right slot
+  const bottomRightPanels = [
+    <KEVTimeline
+      key="kev"
+      total={kev?.total ?? 0}
+      newThisWeek={kev?.newThisWeek ?? 0}
+      loading={kpiLoading}
+    />,
+    <HoneypotWidget key="hp" data={extKpis?.sicherheitstacho ?? null} loading={kpiLoading} />,
+    <CloudflareWidget key="cf" data={extKpis?.cloudflare ?? null} loading={kpiLoading} />,
+  ];
+
   return (
     <div className="flex flex-col h-screen bg-[#06060e] overflow-hidden">
 
@@ -175,10 +215,10 @@ export default function Dashboard() {
           <GermanyTileMap feedItems={allFeedItems} />
         </div>
 
-        {/* Center: Attack vectors + CVE donut */}
+        {/* Center: Attack vectors (rotating with GitHub Advisory) + CVE donut */}
         <div className="grid grid-rows-2 gap-2">
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
-            <AttackVectorChart feedItems={allFeedItems} />
+            <RotatingPanel panels={centerPanels} intervalMs={14000} />
           </div>
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
             <CVESeverityDonut
@@ -189,17 +229,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right: KRITIS sectors + KEV timeline */}
+        {/* Right: KRITIS sectors (rotating with MSRC) + KEV timeline (rotating with Honeypot/Cloudflare) */}
         <div className="grid grid-rows-2 gap-2">
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
-            <SectorTargetChart feedItems={allFeedItems} />
+            <RotatingPanel panels={rightPanels} intervalMs={16000} />
           </div>
           <div className="rounded-lg border border-slate-800/50 bg-slate-950/40 px-3 py-2 overflow-hidden">
-            <KEVTimeline
-              total={kev?.total ?? 0}
-              newThisWeek={kev?.newThisWeek ?? 0}
-              loading={kpiLoading}
-            />
+            <RotatingPanel panels={bottomRightPanels} intervalMs={12000} />
           </div>
         </div>
       </div>
@@ -228,11 +264,11 @@ export default function Dashboard() {
       <div className="px-4 py-1 border-t border-slate-800/40 bg-slate-950/60 flex items-center justify-between shrink-0">
         <span className="text-[10px] text-slate-700">
           News: BSI WID · CERT-Bund · CERT-EU · CVEFeed · Heise · BleepingComputer · Krebs · Golem · Netzpolitik · Bundesregierung · EUR-Lex · Rat der EU · MIT TR · t3n &nbsp;|&nbsp;
-          KPIs: CISA KEV · NIST NVD &nbsp;|&nbsp;
+          KPIs: CISA KEV · NIST NVD · GitHub Advisory · MSRC · Cloudflare Radar · DT Sicherheitstacho &nbsp;|&nbsp;
           Social: Mastodon infosec.exchange · social.bund.de · Bluesky
         </span>
         <span className="text-[10px] text-slate-700">
-          News 5min · KPIs 15min · Social 3min · Karte: KRITIS-Dichte + Medienanalyse · INTERN
+          News 5min · KPIs 15min · Social 3min · Panels rotieren 12-16s · INTERN
         </span>
       </div>
     </div>
